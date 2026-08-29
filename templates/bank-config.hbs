@@ -1,0 +1,44 @@
+<div class="free-magic-bank-config">
+
+  <section class="fmb-section">
+    <h3>Магический Фон</h3>
+
+    <label class="fmb-field">
+      <span>Сцена</span>
+      <select class="fmb-scene-select"></select>
+    </label>
+    <p class="fmb-hint">Каждая Сцена может иметь свой собственный Фон. «Глобально» — общий Фон, который используется, пока для конкретной Сцены ничего не настроено.</p>
+
+    <label class="fmb-field">
+      <span>Максимум Банка</span>
+      <input type="number" class="fmb-max" min="1" step="1" />
+    </label>
+
+    <label class="fmb-field">
+      <span>Текущее число Диких Токенов (видите только вы)</span>
+      <input type="number" class="fmb-value" min="0" step="1" />
+    </label>
+
+    <div class="fmb-readout">
+      <div class="fmb-readout-row"><span>Заполненность</span><strong class="fmb-pct">—</strong></div>
+      <div class="fmb-readout-row"><span>Состояние (авто, по % от максимума)</span><strong class="fmb-state">—</strong></div>
+      <div class="fmb-readout-row"><span>Уровень (авто, по абсолютному числу)</span><strong class="fmb-level">—</strong></div>
+    </div>
+
+    <button type="button" class="fmb-fill">Наполнить до максимума</button>
+
+    <div class="fmb-lock-row" hidden>
+      <p class="fmb-lock-text">⚠ Банк недавно обнулялся — Состояние зафиксировано на «Нестабилен», пока не наполнится до максимума.</p>
+      <button type="button" class="fmb-unlock">Снять фиксацию вручную</button>
+    </div>
+
+    <p class="fmb-hint">Игроки на странице «Получить Токены Маны» видят только Состояние и Уровень — точное число и Максимум видны исключительно вам. Окна Круга у игроков сами определяют актуальную для них Сцену.</p>
+  </section>
+
+  <section class="fmb-section">
+    <h3>Максимум Цены — по персонажам</h3>
+    <p class="fmb-hint">Сколько Стресса максимум может вложить каждый персонаж (до 10, римскими цифрами в самом Круге). То же самое можно настроить и прямо в окне Круга конкретного персонажа — это просто быстрый общий список.</p>
+    <div class="fmb-price-list"></div>
+  </section>
+
+</div>

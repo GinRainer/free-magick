@@ -1,0 +1,24 @@
+{
+  "id": "free-magic",
+  "title": "Свободная Магия",
+  "description": "Кастомная система сборки заклинаний Свободной Магии для Daggerheart (Foundryborne).",
+  "version": "0.16.2",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "relationships": {
+    "systems": [
+      { "id": "daggerheart", "type": "system", "compatibility": {} }
+    ]
+  },
+  "esmodules": ["scripts/free-magic.js"],
+  "styles": ["styles/free-magic.css"],
+  "languages": [
+    { "lang": "ru", "name": "Русский", "path": "lang/ru.json" }
+  ],
+  "authors": [{ "name": "Ваше имя" }],
+  "url": "",
+  "manifest": "",
+  "download": ""
+}

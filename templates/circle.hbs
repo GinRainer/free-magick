@@ -1,0 +1,97 @@
+<div class="free-magic-circle">
+
+  <div class="fm-col-left">
+    <section class="fm-widget fm-paths-widget">
+      <button type="button" class="fm-widget-toggle" data-widget="paths">
+        <i class="fa-solid fa-chevron-right fm-widget-chevron" aria-hidden="true"></i>
+        <span>Мои Токены Маны</span>
+      </button>
+      <div class="fm-widget-body">
+        <p class="fm-paths-hint">Клик по строке — выбрать источник активной кистью. Можно и перетащить прямо на Круг.</p>
+        <div class="fm-paths-list"></div>
+      </div>
+    </section>
+
+    <section class="fm-widget fm-purchase-widget">
+      <button type="button" class="fm-widget-toggle" data-widget="purchase">
+        <i class="fa-solid fa-chevron-right fm-widget-chevron" aria-hidden="true"></i>
+        <span>Получить Токены Маны</span>
+      </button>
+      <div class="fm-widget-body">
+        <div class="fm-purchase-view"></div>
+      </div>
+    </section>
+
+    <section class="fm-widget fm-preview-widget">
+      <button type="button" class="fm-widget-toggle" data-widget="preview">
+        <i class="fa-solid fa-chevron-right fm-widget-chevron" aria-hidden="true"></i>
+        <span>Предпросмотр Чар</span>
+      </button>
+      <div class="fm-widget-body">
+        <div class="fm-preview-list">
+          <p class="fm-preview-item fm-preview-damage">Ваше заклинание не наносит урона</p>
+          <p class="fm-preview-item fm-preview-duration">Ваше заклинание мгновенно развеивается после применения</p>
+          <p class="fm-preview-item fm-preview-reach">Ваше заклинание действует на 1 цель вплотную, не по области</p>
+          <div class="fm-preview-item fm-preview-effect">
+            <p>Ваше заклинание накладывает следующий Эффект:</p>
+            <textarea class="fm-intent-text" rows="3" placeholder="Опишите, как персонаж воздействует на мир..."></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="fm-col-circle">
+    <section class="fm-difficulty">
+      <h3 title="Ориентир для вас как игрока — финальную категорию и Откат определяет ГМ, с учётом нарративного веса и особых условий.">Примерная Сложность</h3>
+      <div class="fm-difficulty-row"><span>Категория</span><strong class="fm-difficulty-category-value">—</strong></div>
+      <div class="fm-difficulty-row"><span>Сложность</span><strong class="fm-difficulty-dc-value">—</strong></div>
+      <div class="fm-difficulty-row"><span>Откат</span><strong class="fm-difficulty-rollback-value">—</strong></div>
+      <div class="fm-difficulty-keys-row" hidden>
+        <span>Ключевые Направления</span>
+        <strong class="fm-difficulty-keys">—</strong>
+      </div>
+      <div class="fm-difficulty-resource-row" hidden>
+        <span class="fm-difficulty-resource-text">Требует 0 Ресурса для применения</span>
+      </div>
+    </section>
+
+    <div class="fm-circle-toolbar">
+      <button type="button" class="fm-fullscreen-toggle" title="Полный экран">
+        <i class="fa-solid fa-expand" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="fm-circle-stage">
+      <svg class="fm-svg" viewBox="0 0 460 460"></svg>
+    </div>
+  </div>
+
+  <div class="fm-col-side">
+    <section class="fm-mods">
+      <h3>Модификаторы</h3>
+      <div class="fm-mods-list"></div>
+    </section>
+
+    <section class="fm-gm-adjust">
+      <h3>Корректировка ГМа</h3>
+      <div class="fm-gm-row">
+        <input type="number" class="fm-gm-value" value="0" step="1" />
+        <input type="text" class="fm-gm-note" placeholder="Причина (необязательно)" />
+      </div>
+      <p class="fm-gm-hint">Положительное число — доп. стоимость (нужно больше жетонов). Отрицательное — бонус: столько жетонов уходит в «Токены Маны» слева.</p>
+    </section>
+
+    <section class="fm-summary">
+      <div class="fm-summary-row"><span>Доступно всего</span><span class="fm-total-available">0</span></div>
+      <div class="fm-summary-row"><span>Размещено на Круге</span><span class="fm-spend-sum">0</span></div>
+      <div class="fm-summary-row"><span>Модификаторы (доп. стоимость)</span><span class="fm-mods-sum">0</span></div>
+      <div class="fm-summary-row"><span>Корректировка ГМа</span><span class="fm-gm-sum">0</span></div>
+      <div class="fm-summary-row fm-total"><span>Итого требуется</span><span class="fm-required-sum">0</span></div>
+      <div class="fm-summary-row fm-total"><span>Остаток</span><span class="fm-remainder-sum">0</span></div>
+      <p class="fm-overspend-warning" hidden></p>
+    </section>
+
+    <button type="button" class="fm-cast">Сотворить</button>
+  </div>
+
+</div>

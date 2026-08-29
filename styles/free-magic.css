@@ -1,0 +1,1089 @@
+/* Свободная Магия — собственная палитра, не зависящая от темы Foundry (светлой/тёмной),
+   чтобы окно оставалось читаемым в любом случае. */
+.free-magic-circle {
+  --fm-bg: #17141f;
+  --fm-panel: #221f2e;
+  --fm-panel-hover: #2c2839;
+  --fm-border: #423c58;
+  --fm-accent: #9166ea;
+  --fm-accent-rgb: 145, 102, 234;
+  --fm-gold: #cda85f;
+  --fm-danger: #e5536b;
+  --fm-danger-rgb: 229, 83, 107;
+  --fm-text: #ece7f5;
+  --fm-text-secondary: #a196b8;
+
+  display: grid;
+  grid-template-columns: 300px 1fr 340px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px;
+  height: 100%;
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  box-sizing: border-box;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.free-magic-circle * { box-sizing: border-box; }
+
+.free-magic-circle h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fm-text-secondary);
+  border: none;
+}
+
+/* --- Левая колонка: сворачиваемые виджеты «Мои Токены Маны» / «Получить Токены Маны» --- */
+/* Заметная тонкая полоса прокрутки — применяется ко всем прокручиваемым областям модуля,
+   чтобы было явно видно, что это скроллящаяся зона, а не обрезанный контент. */
+.fm-col-left, .fm-col-side, .fm-widget-body, .fm-circle-stage {
+  scrollbar-width: thin;
+  scrollbar-color: var(--fm-border) transparent;
+}
+.fm-col-left::-webkit-scrollbar, .fm-col-side::-webkit-scrollbar, .fm-circle-stage::-webkit-scrollbar { width: 7px; }
+.fm-col-left::-webkit-scrollbar-track, .fm-col-side::-webkit-scrollbar-track, .fm-circle-stage::-webkit-scrollbar-track { background: transparent; }
+.fm-col-left::-webkit-scrollbar-thumb, .fm-col-side::-webkit-scrollbar-thumb, .fm-circle-stage::-webkit-scrollbar-thumb {
+  background: var(--fm-border);
+  border-radius: 4px;
+}
+.fm-col-left::-webkit-scrollbar-thumb:hover, .fm-col-side::-webkit-scrollbar-thumb:hover, .fm-circle-stage::-webkit-scrollbar-thumb:hover {
+  background: var(--fm-accent);
+}
+
+.fm-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  min-height: 0; /* без этого grid-строка растягивается по контенту и вылезает за окно */
+  min-width: 0;
+}
+
+.fm-widget {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.fm-widget-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--fm-text);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.fm-widget-toggle:hover { background: var(--fm-panel-hover); }
+
+.fm-widget-chevron { transition: transform 0.15s ease; color: var(--fm-text-secondary); }
+.fm-widget.fm-expanded .fm-widget-chevron { transform: rotate(90deg); color: var(--fm-accent); }
+
+.fm-widget-body {
+  display: none;
+  padding: 0 10px 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fm-border) transparent;
+}
+.fm-widget.fm-expanded .fm-widget-body { display: block; }
+
+.fm-paths-hint { font-size: 11px; color: var(--fm-text-secondary); margin: 0 0 8px; }
+
+.fm-path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.fm-path-row:hover { background: var(--fm-panel-hover); }
+.fm-path-active { border-color: var(--fm-path-color, var(--fm-accent)); background: var(--fm-panel-hover); }
+
+/* Визуальный разделитель перед обобщёнными источниками (Токены Маны / Дикие Токены) */
+.fm-path-row.fm-source-generic {
+  margin-top: 6px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--fm-border);
+  border-radius: 0;
+}
+.fm-path-row.fm-source-generic.fm-path-active { border-top-style: dashed; }
+
+.fm-path-row[draggable="true"] { cursor: grab; }
+.fm-path-row[draggable="true"]:active { cursor: grabbing; }
+
+.fm-token {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--fm-path-color, #999);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.fm-path-name { flex: 1; color: var(--fm-text); }
+.fm-path-count { font-size: 11px; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; color: var(--fm-text-secondary); }
+.fm-path-item-bonus {
+  font-size: 10px;
+  color: var(--fm-gold);
+  background: rgba(var(--fm-accent-rgb), 0.12);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.fm-path-pool {
+  width: 34px;
+  font-size: 12px;
+  background: var(--fm-panel);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 3px;
+}
+
+/* --- Колонка Круга --- */
+.fm-col-circle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  min-width: 0;
+}
+
+.fm-circle-toolbar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+  flex: 0 0 auto;
+}
+
+.fm-fullscreen-toggle {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 30px;
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.fm-fullscreen-toggle:hover { background: var(--fm-panel-hover); }
+
+/* Подстраховка на случай, если setPosition() чем-то ограничен другим CSS Foundry —
+   эти правила побеждают даже инлайн-стили благодаря !important. */
+#free-magic-circle.fm-fullscreen {
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+}
+
+/* Круг теперь один в колонке (Докупка переехала налево) — растягивается на всё доступное
+   пространство, в том числе в полноэкранном режиме. Скролл — просто подстраховка на случай
+   нехватки высоты у самого окна. */
+.fm-circle-stage {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.fm-svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+/* Нейтральный тир 0 — штриховка, чтобы визуально отличался от пустых (доступных) колец */
+.fm-hub { fill: url(#fm-neutral-hatch); stroke: var(--fm-border); stroke-width: 1; cursor: pointer; }
+.fm-hatch-bg { fill: var(--fm-panel); }
+.fm-hatch-line { stroke: var(--fm-text-secondary); stroke-width: 1; }
+.fm-hub-label { font-size: 10px; fill: var(--fm-text-secondary); pointer-events: none; }
+
+.fm-wedge { stroke: var(--fm-border); stroke-width: 1; cursor: pointer; }
+.fm-wedge.fm-empty { fill: var(--fm-panel); stroke-dasharray: 2 2; }
+.fm-wedge.fm-filled-path { stroke: rgba(0, 0, 0, 0.25); }
+.fm-wedge:hover { stroke: var(--fm-text); stroke-width: 1.5; }
+
+.fm-ring-icon-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+}
+
+.fm-label { font-size: 10px; fill: var(--fm-text); }
+
+/* --- Виджет «Получить Токены Маны» --- */
+.fm-purchase-view { width: 100%; }
+.fm-purchase-intro { font-size: 11px; color: var(--fm-text-secondary); margin: 0 0 10px; }
+
+.fm-purchase-row {
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.fm-purchase-label { font-weight: 600; margin-bottom: 6px; }
+
+.fm-purchase-limit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--fm-text-secondary);
+  margin-bottom: 6px;
+}
+.fm-purchase-limit-input {
+  width: 40px;
+  background: var(--fm-panel);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+}
+
+.fm-purchase-tiers { display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap; }
+.fm-tier-btn {
+  flex: 1;
+  min-width: 26px;
+  padding: 4px 0;
+  border: 1px solid var(--fm-border);
+  background: var(--fm-panel);
+  color: var(--fm-text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.fm-tier-btn.fm-tier-active { background: var(--fm-accent); color: #fff; border-color: var(--fm-accent); }
+.fm-tier-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.fm-purchase-desc { font-size: 12px; color: var(--fm-text-secondary); }
+
+.fm-bank-box {
+  background: var(--fm-bg);
+  border: 1px dashed var(--fm-border);
+  border-radius: 6px;
+  padding: 10px;
+}
+.fm-bank-location { font-size: 11px; color: var(--fm-text-secondary); margin-bottom: 4px; }
+.fm-bank-status { font-size: 12px; margin-bottom: 6px; color: var(--fm-text); }
+.fm-bank-cap { font-size: 11px; color: var(--fm-text-secondary); margin-bottom: 8px; }
+.fm-bank-actions { display: flex; gap: 8px; align-items: center; }
+.fm-bank-draw, .fm-bank-configure {
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.fm-bank-draw:hover, .fm-bank-configure:hover { background: var(--fm-panel); }
+.fm-bank-draw:disabled { opacity: 0.5; cursor: not-allowed; }
+.fm-bank-draw:disabled:hover { background: var(--fm-bg); }
+.fm-bank-hint { font-size: 11px; color: var(--fm-text-secondary); margin: 6px 0 0; }
+
+/* --- Правая колонка --- */
+.fm-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.fm-mods, .fm-gm-adjust, .fm-summary {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.fm-mod-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--fm-border);
+  cursor: pointer;
+  color: var(--fm-text);
+}
+.fm-mod-row:last-child { border-bottom: none; }
+
+.fm-mod-badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  white-space: nowrap;
+}
+
+.fm-gm-row { display: flex; gap: 8px; }
+.fm-gm-value, .fm-gm-note, .fm-intent-text {
+  background: var(--fm-panel);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 4px;
+}
+.fm-gm-value { width: 70px; }
+.fm-gm-note { flex: 1; }
+.fm-gm-hint { font-size: 11px; color: var(--fm-text-secondary); margin: 6px 0 0; }
+
+.fm-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 2px 0;
+  color: var(--fm-text);
+}
+
+.fm-total {
+  font-weight: bold;
+  border-top: 1px solid var(--fm-border);
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+.fm-difficulty {
+  width: 100%;
+  flex: 0 0 auto;
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.fm-difficulty h3 { margin: 0 0 8px; cursor: help; width: fit-content; }
+.fm-difficulty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  padding: 3px 0;
+  color: var(--fm-text);
+}
+.fm-difficulty-row span { color: var(--fm-text-secondary); }
+.fm-difficulty-row strong { font-weight: 600; }
+.fm-difficulty-category-value { color: var(--fm-gold); }
+
+.fm-difficulty-keys-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  padding: 6px 0 0;
+  margin-top: 4px;
+  border-top: 1px dashed var(--fm-border);
+  color: var(--fm-text-secondary);
+}
+.fm-difficulty-keys { color: var(--fm-accent); font-weight: 600; text-align: right; }
+
+.fm-difficulty-resource-row { padding: 4px 0 0; }
+.fm-difficulty-resource-text { font-size: 11px; color: var(--fm-text-secondary); font-style: italic; }
+
+.fm-overspend-warning {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(var(--fm-danger-rgb), 0.12);
+  color: var(--fm-danger);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fm-intent-text { width: 100%; }
+
+.fm-preview-list { display: flex; flex-direction: column; gap: 10px; }
+.fm-preview-item {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fm-text);
+  padding: 8px 10px;
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-border);
+  border-radius: 4px;
+  border-left: 3px solid var(--fm-border);
+  transition: border-left-color 0.15s ease, color 0.15s ease;
+}
+.fm-preview-item.fm-preview-key {
+  border-left-color: var(--fm-gold);
+  color: var(--fm-gold);
+  font-weight: 600;
+}
+.fm-preview-effect p { margin: 0 0 6px; }
+.fm-preview-effect .fm-intent-text { margin-top: 2px; }
+
+.fm-cast {
+  margin-top: auto;
+  font-weight: bold;
+  background: var(--fm-gold);
+  color: #221a0d;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 0;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 12px rgba(var(--fm-accent-rgb), 0.25);
+}
+.fm-cast:hover { filter: brightness(1.08); box-shadow: 0 0 16px rgba(var(--fm-accent-rgb), 0.4); }
+
+.free-magic-open-btn {
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+/* --- Окно настройки Магического Фона (ГМ) --- */
+.free-magic-bank-config {
+  --fm-bg: #17141f;
+  --fm-panel: #221f2e;
+  --fm-panel-hover: #2c2839;
+  --fm-border: #423c58;
+  --fm-accent: #9166ea;
+  --fm-accent-rgb: 145, 102, 234;
+  --fm-gold: #cda85f;
+  --fm-danger: #e5536b;
+  --fm-danger-rgb: 229, 83, 107;
+  --fm-text: #ece7f5;
+  --fm-text-secondary: #a196b8;
+
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  padding: 14px;
+  font-size: 13px;
+}
+
+.fmb-section {
+  background: var(--fm-panel-hover);
+  border: 1px solid var(--fm-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.fmb-section:last-child { margin-bottom: 0; }
+.fmb-section h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fm-text-secondary);
+}
+
+.fmb-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.fmb-field span { font-size: 12px; color: var(--fm-text-secondary); }
+.fmb-value, .fmb-max, .fmb-scene-select {
+  background: var(--fm-panel);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+.fmb-hint { font-size: 11px; color: var(--fm-text-secondary); margin: 0 0 8px; }
+
+.fmb-readout {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.fmb-readout-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+  color: var(--fm-text);
+}
+
+.fmb-fill {
+  width: 100%;
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text);
+  border-radius: 4px;
+  padding: 6px 0;
+  cursor: pointer;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.fmb-fill:hover { background: var(--fm-panel-hover); }
+
+.fmb-lock-row {
+  background: rgba(var(--fm-danger-rgb), 0.12);
+  border: 1px solid var(--fm-danger);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.fmb-lock-text { font-size: 11px; color: var(--fm-danger); margin: 0 0 6px; }
+.fmb-unlock {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.fmb-unlock:hover { background: var(--fm-panel-hover); }
+
+.fmb-price-list { display: flex; flex-direction: column; gap: 6px; }
+.fmb-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.fmb-price-name { font-size: 12px; color: var(--fm-text); }
+.fmb-price-input {
+  width: 50px;
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 12px;
+  text-align: center;
+}
+
+
+
+/* --- Панель на листе персонажа (стиль Paper Doll) ---
+   Внедряется как прямой потомок корня листа персонажа. Важно: панель позиционируется
+   ВНУТРИ границ листа (left:0..width, а не за его пределами через отрицательный translateX) —
+   первая версия выносила и кнопку, и панель за левый край листа, а окна Foundry часто
+   обрезают всё, что выходит за собственные границы (overflow:hidden), из-за чего было не видно.
+   Кнопка-переключатель теперь в шапке листа (см. sheet-panel.js) — то же самое надёжное место,
+   где уже работает кнопка открытия Круга. */
+
+.free-magic-sheet-toggle-btn { margin-left: 8px; font-size: 12px; cursor: pointer; }
+.free-magic-sheet-toggle-btn.fm-active { color: #9166ea; }
+
+.free-magic-sheet-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translateX(-100%); /* всегда "снаружи", сразу слева от листа — см. sheet-panel.js про overflow:visible */
+  width: 300px;
+  height: 100%;
+  z-index: 20;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s;
+}
+.free-magic-sheet-panel.fm-open {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.free-magic-sheet-panel-inner {
+  --fm-bg: #17141f;
+  --fm-panel: #221f2e;
+  --fm-panel-hover: #2c2839;
+  --fm-border: #423c58;
+  --fm-accent: #9166ea;
+  --fm-accent-rgb: 145, 102, 234;
+  --fm-gold: #cda85f;
+  --fm-danger: #e5536b;
+  --fm-danger-rgb: 229, 83, 107;
+  --fm-text: #ece7f5;
+  --fm-text-secondary: #a196b8;
+
+  height: 100%;
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.free-magic-sheet-panel-inner * { box-sizing: border-box; }
+
+.fm-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--fm-border);
+  flex: 0 0 auto;
+}
+.fm-sheet-header h2 { margin: 0; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.fm-sheet-close {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text);
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+}
+.fm-sheet-close:hover { background: var(--fm-panel-hover); }
+
+.fm-sheet-body { flex: 1 1 auto; overflow-y: auto; padding: 12px; }
+
+.fm-sheet-section h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fm-text-secondary);
+}
+.fm-sheet-hint { font-size: 11px; color: var(--fm-text-secondary); margin: 0 0 10px; line-height: 1.4; }
+
+.fm-sheet-path-row {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.fm-sheet-path-head { display: flex; align-items: center; gap: 8px; }
+.fm-sheet-token {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--fm-path-color, #999);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex: 0 0 auto;
+}
+.fm-sheet-path-name { flex: 1; font-weight: 600; }
+.fm-sheet-path-total {
+  font-weight: 700;
+  color: var(--fm-gold);
+  font-size: 14px;
+  min-width: 20px;
+  text-align: right;
+}
+
+.fm-sheet-path-detail {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--fm-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fm-sheet-detail-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--fm-text-secondary);
+}
+.fm-sheet-manual {
+  width: 50px;
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+.fm-sheet-bonus-value { color: var(--fm-gold); font-weight: 600; }
+
+.fm-sheet-add-bonus {
+  background: var(--fm-bg);
+  border: 1px dashed var(--fm-border);
+  color: var(--fm-text-secondary);
+  border-radius: 4px;
+  padding: 5px 0;
+  cursor: pointer;
+  font-size: 11px;
+}
+.fm-sheet-add-bonus:hover { background: var(--fm-panel-hover); color: var(--fm-text); }
+
+.fm-sheet-bonus-list { list-style: none; margin: 4px 0 0; padding: 0; }
+.fm-sheet-bonus-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--fm-text-secondary);
+  padding: 2px 0;
+}
+.fm-sheet-bonus-remove {
+  background: none;
+  border: none;
+  color: var(--fm-danger);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.fm-sheet-bonus-remove:hover { color: #fff; }
+
+/* --- Постоянный виджет ГМа со списком открытых сборок заклинаний (document.body, не привязан
+   ни к одному конкретному листу/окну — виден поверх всего интерфейса, пока ГМ) --- */
+#free-magic-gm-watch {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  width: 220px;
+  background: #17141f;
+  border: 1px solid #423c58;
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  font-family: inherit;
+  overflow: hidden;
+}
+.fm-watch-header {
+  background: #221f2e;
+  color: #a196b8;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid #423c58;
+}
+.fm-watch-list { max-height: 220px; overflow-y: auto; }
+.fm-watch-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #2c2839;
+  color: #ece7f5;
+  font-size: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.fm-watch-row:last-child { border-bottom: none; }
+.fm-watch-row:hover { background: #2c2839; color: #9166ea; }
+
+/* --- Окно наблюдения ГМа за конкретной сборкой --- */
+.free-magic-gm-viewer {
+  --fm-bg: #17141f;
+  --fm-panel: #221f2e;
+  --fm-panel-hover: #2c2839;
+  --fm-border: #423c58;
+  --fm-accent: #9166ea;
+  --fm-gold: #cda85f;
+  --fm-danger: #e5536b;
+  --fm-text: #ece7f5;
+  --fm-text-secondary: #a196b8;
+
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  padding: 12px;
+  font-size: 12px;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.free-magic-gm-viewer * { box-sizing: border-box; }
+
+.fm-gmv-closed-banner {
+  background: rgba(229, 83, 107, 0.15);
+  border: 1px solid var(--fm-danger);
+  color: var(--fm-danger);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  margin: 0 0 10px;
+}
+
+.fm-gmv-section {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.fm-gmv-section h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fm-text-secondary);
+}
+
+.fm-gmv-token-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.fm-gmv-token-name { flex: 1; display: flex; align-items: center; gap: 6px; }
+.fm-gmv-token-input {
+  width: 46px;
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 3px;
+  padding: 2px 4px;
+  text-align: center;
+}
+.fm-gmv-token-bonus { font-size: 11px; color: var(--fm-gold); width: 40px; text-align: right; }
+.fm-gmv-price-row { border-top: 1px dashed var(--fm-border); margin-top: 4px; padding-top: 8px; }
+
+.fm-gmv-sector-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  color: var(--fm-text);
+}
+.fm-gmv-sector-row span { color: var(--fm-text-secondary); }
+
+.fm-gmv-mod-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.fm-gmv-mod-badge {
+  font-size: 11px;
+  background: var(--fm-bg);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+.fm-gmv-intent { color: var(--fm-text-secondary); font-style: italic; margin: 0; }
+.fm-gmv-hint { color: var(--fm-text-secondary); font-size: 11px; margin: 0; }
+
+/* --- v0.15: Окно настройки ГМа v2 (Каталог / Эта сцена / Игроки) ------------------------- */
+
+#free-magic-resource-config { color: var(--fm-text); }
+
+.fmrc-root {
+  --fm-bg: #17141f;
+  --fm-panel: #221f2e;
+  --fm-panel-hover: #2c2839;
+  --fm-border: #423c58;
+  --fm-accent: #9166ea;
+  --fm-accent-rgb: 145, 102, 234;
+  --fm-gold: #cda85f;
+  --fm-danger: #e5536b;
+  --fm-danger-rgb: 229, 83, 107;
+  --fm-text: #ece7f5;
+  --fm-text-secondary: #a196b8;
+
+  display: block;
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  height: 100%;
+}
+
+.fmrc-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 8px 0;
+  border-bottom: 1px solid var(--fm-border);
+}
+.fmrc-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  color: var(--fm-text-secondary);
+  padding: 6px 12px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+}
+.fmrc-tab-btn:hover { color: var(--fm-text); background: var(--fm-panel-hover); }
+.fmrc-tab-active {
+  color: var(--fm-text) !important;
+  background: var(--fm-panel) !important;
+  border-color: var(--fm-border) !important;
+}
+
+.fmrc-panel { padding: 12px; overflow-y: auto; max-height: 560px; }
+.fmrc-hint { color: var(--fm-text-secondary); font-size: 11px; margin: 0 0 10px; }
+
+.fmrc-catalog-element {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.fmrc-catalog-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.fmrc-catalog-row input.fmrc-el-icon { width: 130px; }
+.fmrc-catalog-row input.fmrc-el-label { flex: 1; }
+.fmrc-el-tooltip { width: 100%; margin-bottom: 6px; }
+.fmrc-el-remove, .fmrc-as-remove {
+  background: transparent;
+  border: none;
+  color: var(--fm-danger);
+  cursor: pointer;
+}
+
+.fmrc-aspect-list { margin-left: 20px; border-left: 2px solid var(--fm-border); padding-left: 8px; }
+.fmrc-catalog-aspect { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.fmrc-catalog-aspect input.fmrc-as-icon { width: 110px; }
+.fmrc-catalog-aspect input.fmrc-as-label { width: 110px; }
+.fmrc-catalog-aspect input.fmrc-as-tooltip { flex: 1; }
+
+.fmrc-add-row { display: flex; gap: 6px; margin-top: 6px; }
+.fmrc-add-row input { flex: 1; }
+.fmrc-add-row button {
+  background: var(--fm-accent);
+  color: var(--fm-bg);
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.fmrc-add-aspect-row { margin-left: 20px; }
+
+.fmrc-scene-select-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.fmrc-scene-select-row select { flex: 1; }
+
+.fmrc-background-block, .fmrc-active-block {
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+.fmrc-background-block legend, .fmrc-active-block legend { color: var(--fm-gold); padding: 0 4px; }
+.fmrc-bg-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.fmrc-bg-row input { width: 80px; }
+.fmrc-bg-status { margin-bottom: 6px; }
+.fmrc-bg-instability { color: var(--fm-danger); }
+.fmrc-bg-reset-instability {
+  background: var(--fm-danger);
+  color: var(--fm-text);
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.fmrc-active-element { margin-bottom: 8px; }
+.fmrc-active-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+.fmrc-active-row label { display: flex; align-items: center; gap: 6px; flex: 1; }
+.fmrc-active-row input[type="number"] { width: 56px; }
+.fmrc-active-aspect-row { margin-left: 22px; color: var(--fm-text-secondary); }
+
+.fmrc-players-header, .fmrc-player-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+}
+.fmrc-players-header { color: var(--fm-text-secondary); font-size: 11px; border-bottom: 1px solid var(--fm-border); margin-bottom: 4px; }
+.fmrc-player-row { border-bottom: 1px solid var(--fm-border); }
+.fmrc-player-row:last-child { border-bottom: none; }
+
+/* --- v0.16: Базовое отображение Ресурса Сцены (виден всем клиентам) --------------------- */
+
+#free-magic-resource-widget {
+  --fm-bg: #17141f;
+  --fm-panel: #221f2e;
+  --fm-border: #423c58;
+  --fm-accent: #9166ea;
+  --fm-gold: #cda85f;
+  --fm-danger: #e5536b;
+  --fm-text: #ece7f5;
+  --fm-text-secondary: #a196b8;
+
+  position: fixed;
+  z-index: 55;
+  width: 200px;
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  color: var(--fm-text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 8px;
+  cursor: grab;
+  user-select: none;
+}
+
+/* Позиция по умолчанию, пока виджет ни разу не перетаскивали — верх по центру экрана.
+   Как только появляются явные left/top в inline-style (после первого drag), этот класс
+   снимается и центрирование больше не пересчитывается (см. resource-widget.js). */
+.fmrw-default-position {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#free-magic-resource-widget.fmrw-dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65);
+}
+
+.fmrw-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+.fmrw-background {
+  font-weight: bold;
+  border-bottom: 1px solid var(--fm-border);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+.fmrw-background i { color: var(--fm-accent); }
+.fmrw-state-stable i { color: #6fcf7a; }
+.fmrw-state-risk i { color: var(--fm-gold); }
+.fmrw-state-edge i { color: #e08a3f; }
+.fmrw-state-unstable i { color: var(--fm-danger); }
+
+.fmrw-label { flex: 1; }
+.fmrw-aspect { padding-left: 16px; color: var(--fm-text-secondary); }
+.fmrw-value { min-width: 36px; text-align: center; }
+.fmrw-btn {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text);
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+}
+.fmrw-btn:hover { background: var(--fm-accent); color: var(--fm-bg); }
+.fmrw-empty-hint { color: var(--fm-text-secondary); font-size: 11px; margin: 4px 0 0; }
