@@ -172,11 +172,10 @@ export function renderWidget() {
   const status = getBackgroundStatus(sceneId);
   const elements = getActiveResourceList(sceneId);
   const isGM = game.user.isGM;
+  const canSeeExactBackground = viewerRevealsBackground();
   const viewerKeys = viewerElementKeys();
 
-  // Точное число Фона по умолчанию видит только ГМ (раздел 11.4 — открытие игроку через флаг
-  // умения `revealsBackground` появится в v0.17, пока просто статусная строка для всех).
-  const bgText = isGM
+  const bgText = canSeeExactBackground
     ? `${status.value}/${status.max}${status.instability > 0 ? ` · Нестабильность ${status.instability}` : ""}`
     : status.stateLabel;
 
