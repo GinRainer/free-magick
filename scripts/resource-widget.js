@@ -11,7 +11,8 @@ import {
   getActiveResourceList,
   getBackgroundStatus,
   setResourceValue,
-  getActorElements
+  getActorElements,
+  getActorRevealsBackground
 } from "./scene-resource.js";
 
 let widgetEl = null;
@@ -54,9 +55,12 @@ export function registerResourceWidget() {
 
   // Если у актора, за которого играет этот пользователь, поменялся привязанный Элемент —
   // может измениться то, что ему разрешено видеть/трогать в виджете.
-  Hooks.on("updateActor", (actor, changes) => {
+ Hooks.on("updateActor", (actor, changes) => {
     if (actor.id !== game.user.character?.id) return;
-    if (foundry.utils.hasProperty(changes, `flags.${MODULE_ID}.elements`)) renderWidget();
+    const relevant =
+      foundry.utils.hasProperty(changes, `flags.${MODULE_ID}.elements`) ||
+      foundry.utils.hasProperty(changes, `flags.${MODULE_ID}.revealsBackground`);
+    if (relevant) renderWidget();
   });
 }
 
@@ -145,6 +149,16 @@ function viewerElementKeys() {
   if (game.user.isGM) return null;
   const actor = game.user.character;
   return new Set(actor ? getActorElements(actor) : []);
+}
+/**
+ * Может ли этот клиент видеть точное число Фона: ГМ — всегда; игрок — если персонажу,
+ * за которого он играет, ГМ выставил чекбокс "Открывает Фон" (GM Settings → «Игроки»).
+ * Действует глобально — не зависит от того, какую Сцену видит клиент прямо сейчас.
+ */
+function viewerRevealsBackground() {
+  if (game.user.isGM) return true;
+  const actor = game.user.character;
+  return actor ? getActorRevealsBackground(actor) : false;
 }
 
 function canTouch(key, viewerKeys, isGM) {
