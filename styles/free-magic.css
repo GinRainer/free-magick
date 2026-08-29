@@ -1007,7 +1007,7 @@
 
 .fmrc-players-header, .fmrc-player-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr;
+  grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 0.6fr;
   gap: 8px;
   align-items: center;
   padding: 4px 0;
