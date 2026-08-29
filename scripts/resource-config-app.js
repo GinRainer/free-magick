@@ -345,7 +345,14 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
 
   async _renderPlayersTab(root) {
     const panel = root.querySelector('[data-tab-panel="players"]');
-    const actors = this._playerCharacters();
+      const rows = actors.map((actor) => {
+      const currentElement = getActorElements(actor)[0] ?? "";
+      const priceMaxPromise = getPriceMax(actor);
+      const autoLimit = getAutoSpellcastLimit(actor);
+      const override = getSpellcastLimitOverride(actor);
+      const revealsBackground = getActorRevealsBackground(actor);
+      return { actor, currentElement, priceMaxPromise, autoLimit, override, revealsBackground };
+    });
     const catalog = getCatalog();
     const elementOptions = Object.values(catalog);
 
@@ -370,6 +377,7 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
         <span>Элемент</span>
         <span>Объём Сосуда</span>
         <span>Заклинательный Лимит</span>
+        <span>Видит Фон</span>
       </div>
       <div class="fmrc-players-list">
         ${rows
@@ -391,6 +399,8 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
                    placeholder="${r.autoLimit ?? "нет @cast"}"
                    value="${r.override ?? ""}"
                    title="Пусто = берётся автоматически из @cast (сейчас: ${r.autoLimit ?? "нет"}). Введи число, чтобы переопределить вручную." />
+            <input type="checkbox" class="fmrc-player-reveals-bg" ${r.revealsBackground ? "checked" : ""}
+                   title="Персонаж видит точное число Фона (value/max + Нестабильность) на любой Сцене, а не только статус." />
           </div>
         `
           )
@@ -415,6 +425,9 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
       row.querySelector(".fmrc-player-price").addEventListener("change", async (ev) => {
         const clamped = await setPriceMax(actor, ev.currentTarget.value);
         ev.currentTarget.value = clamped;
+      });
+      row.querySelector(".fmrc-player-reveals-bg").addEventListener("change", async (ev) => {
+        await setActorRevealsBackground(actor, ev.currentTarget.checked);
       });
 
       row.querySelector(".fmrc-player-limit").addEventListener("change", async (ev) => {
