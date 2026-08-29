@@ -310,5 +310,25 @@ export function getActiveResourceList(sceneId = null) {
       aspects
     });
   }
+  // --- v0.17: Кто видит точный Фон (раздел 11.4) ---------------------------------------------
+//
+// Не завязано на конкретный Элемент/Аспект и не механизм на флагах Item (как бонусы Путей) —
+// это отдельное разрешение ГМа per-персонаж, редактируется чекбоксом в GM Settings → «Игроки»
+// (см. resource-config-app.js). И, по замыслу, действует ГЛОБАЛЬНО: если персонажу открыт Фон,
+// игрок видит точные цифры независимо от того, на какой Сцене он сейчас находится — сама
+// величина Фона по-прежнему берётся для актуальной для клиента Сцены (см. resource-widget.js),
+// меняется только то, разрешено ли ему увидеть число вместо статусной строки.
+
+const REVEALS_BACKGROUND_FLAG = "revealsBackground";
+
+export function getActorRevealsBackground(actor) {
+  return Boolean(actor?.getFlag(MODULE_ID, REVEALS_BACKGROUND_FLAG));
+}
+
+export async function setActorRevealsBackground(actor, value) {
+  const flag = Boolean(value);
+  await actor.setFlag(MODULE_ID, REVEALS_BACKGROUND_FLAG, flag);
+  return flag;
+}
   return elements;
 }
