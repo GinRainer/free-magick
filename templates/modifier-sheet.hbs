@@ -1,0 +1,32 @@
+<div class="free-magic-modifier-sheet">
+  <div class="fm-modsheet-header">
+    <img class="fm-modsheet-img" src="{{item.img}}" title="Изменить иконку" alt="" />
+    <input type="text" name="name" value="{{item.name}}" placeholder="Название модификатора" />
+  </div>
+
+  <section class="fm-modsheet-section">
+    <h3>Описание</h3>
+    <textarea name="system.description" rows="3" placeholder="Флейвор-текст, антураж...">{{system.description}}</textarea>
+  </section>
+
+  <section class="fm-modsheet-section">
+    <h3>Модификатор (что он делает)</h3>
+    <textarea name="system.effect" rows="3" placeholder="Механический эффект — что конкретно меняет этот модификатор...">{{system.effect}}</textarea>
+  </section>
+
+  <section class="fm-modsheet-section fm-modsheet-cost-section">
+    <h3>Стоимость</h3>
+    <div class="fm-modsheet-cost-row">
+      <label>
+        <span>Жетоны (отрицательное = даёт Ману, положительное = доп. стоимость)</span>
+        <input type="number" name="system.tokenCost" step="1" value="{{system.tokenCost}}" />
+      </label>
+    </div>
+    <div class="fm-modsheet-cost-row">
+      <label>
+        <span>Изменение Сложности (независимо от жетонов, например -5 или +5)</span>
+        <input type="number" name="system.difficultyDelta" step="1" value="{{system.difficultyDelta}}" />
+      </label>
+    </div>
+  </section>
+</div>

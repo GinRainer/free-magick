@@ -1,6 +1,5 @@
 import { MODULE_ID } from "./bank.js";
 import { getActorModifiers } from "./modifiers.js";
-import { renderIconHtml } from "./icon-utils.js";
 import { PATHS, getManualPathPools, setManualPathPool, getItemBonusByPath, getPriceMax, setPriceMax, PRICE_MAX_CEILING } from "./paths.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -175,16 +174,19 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
 
     list.innerHTML = modifiers.map((m) => {
       const checked = Boolean(modsOn[m.key]);
-      const badge = m.cost > 0 ? `-${m.cost}` : `+${Math.abs(m.cost)}`;
-      const iconHtml = m.icon ? renderIconHtml(m.icon, { className: "fm-gmv-mod-icon" }) : "";
+      const tokenBadge = m.tokenCost > 0 ? `-${m.tokenCost}` : m.tokenCost < 0 ? `+${Math.abs(m.tokenCost)}` : "";
+      const difficultyBadge = m.difficultyDelta !== 0 ? `${m.difficultyDelta > 0 ? "+" : ""}${m.difficultyDelta} Слож.` : "";
       return `
         <label class="fm-gmv-mod-row">
           <span>
             <input type="checkbox" data-mod-key="${m.key}" ${checked ? "checked" : ""} />
-            ${iconHtml}
+            <img class="fm-gmv-mod-icon" src="${m.icon}" alt="" />
             ${m.label}
           </span>
-          <span class="fm-gmv-mod-badge">${badge}</span>
+          <span class="fm-gmv-mod-badges">
+            ${tokenBadge ? `<span class="fm-gmv-mod-badge">${tokenBadge}</span>` : ""}
+            ${difficultyBadge ? `<span class="fm-gmv-mod-badge fm-gmv-mod-badge-difficulty">${difficultyBadge}</span>` : ""}
+          </span>
         </label>
       `;
     }).join("");

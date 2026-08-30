@@ -2,7 +2,6 @@ import { MODULE_ID, getBankStatus, setBankValue } from "./bank.js";
 import { FreeMagicBankConfig } from "./bank-config-app.js";
 import { PATHS, getItemBonusByPath, getPriceMax } from "./paths.js";
 import { getActorModifiers } from "./modifiers.js";
-import { renderIconHtml } from "./icon-utils.js";
 import { handleGmWatchMessage } from "./gm-watch.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -182,7 +181,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     // Параметры страницы «Докупить жетоны» — простые числа 0–4.
     this.grantTiers = Object.fromEntries(GRANT_SECTORS.map((s) => [s.key, 0]));
 
-    // Модификаторы (v0.18) — теперь Items на акторе (см. modifiers.js), заранее не известны
+    // Модификаторы (v0.19) — теперь Item sub-type free-magic.modifier на акторе (см. modifiers.js),
     // конструктору, поэтому modsOn стартует пустым. Отсутствие ключа == "выключен" везде ниже
     // (`this.modsOn[m.key]`), так что пустой объект — корректное начальное состояние для
     // любого набора модификаторов, какой бы у актора ни оказался.
@@ -237,9 +236,9 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       this._recalculate(this.element);
     });
 
-    // Модификаторы теперь тоже Items на акторе (v0.18) — если их добавили/удалили/поменяли
-    // прямо во время открытого Круга (например, через панель на листе персонажа), список
-    // должен обновиться сам, без перезакрытия окна.
+    // Модификаторы теперь тоже Items на акторе (v0.18, тип уточнён в v0.19) — если их
+    // добавили/удалили/поменяли прямо во время открытого Круга (например, через панель на
+    // листе персонажа), список должен обновиться сам, без перезакрытия окна.
     const onModifierItemChange = (item) => {
       if (item.parent?.id !== this.actor?.id) return;
       if (!this.element) return;
@@ -399,8 +398,8 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
   _generatedBySource(key) {
     if (key === MANA_SOURCE.key) {
       const modifiers = getActorModifiers(this.actor);
-      const modsGrant = modifiers.filter((m) => this.modsOn[m.key] && m.cost < 0).reduce(
-        (a, m) => a + Math.abs(m.cost),
+      const modsGrant = modifiers.filter((m) => this.modsOn[m.key] && m.tokenCost < 0).reduce(
+        (a, m) => a + Math.abs(m.tokenCost),
         0
       );
       const purchaseGrant = Object.values(this.grantTiers).reduce((a, b) => a + b, 0);
@@ -480,7 +479,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  // --- Модификаторы (v0.18 — читаются из Items на акторе, см. modifiers.js) ---
+  // --- Модификаторы (v0.19 — Item sub-type free-magic.modifier, см. modifiers.js) ---
 
   _renderModifiers(root) {
     const list = root.querySelector(".fm-mods-list");
@@ -495,15 +494,26 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const mod of modifiers) {
       const row = document.createElement("label");
       row.classList.add("fm-mod-row");
-      const badgeText = mod.cost < 0 ? `+${Math.abs(mod.cost)} → Мана` : `-${mod.cost}`;
-      const iconHtml = mod.icon ? renderIconHtml(mod.icon, { className: "fm-mod-icon" }) : "";
+
+      const tokenBadge =
+        mod.tokenCost < 0
+          ? `+${Math.abs(mod.tokenCost)} → Мана`
+          : mod.tokenCost > 0
+            ? `-${mod.tokenCost}`
+            : "";
+      const difficultyBadge =
+        mod.difficultyDelta !== 0 ? `${mod.difficultyDelta > 0 ? "+" : ""}${mod.difficultyDelta} Слож.` : "";
+
       row.innerHTML = `
         <span class="fm-mod-check">
           <input type="checkbox" data-key="${mod.key}" ${this.modsOn[mod.key] ? "checked" : ""}/>
-          ${iconHtml}
+          <img class="fm-mod-icon" src="${mod.icon}" alt="" />
           ${mod.label}
         </span>
-        <span class="fm-mod-badge">${badgeText}</span>
+        <span class="fm-mod-badges">
+          ${tokenBadge ? `<span class="fm-mod-badge">${tokenBadge}</span>` : ""}
+          ${difficultyBadge ? `<span class="fm-mod-badge fm-mod-badge-difficulty">${difficultyBadge}</span>` : ""}
+        </span>
       `;
       row.querySelector("input").addEventListener("change", (ev) => {
         this.modsOn[mod.key] = ev.currentTarget.checked;
@@ -837,6 +847,26 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     void sum; // сумма не показывается напрямую в этом виджете, только категория/сложность/откат
   }
 
+  // --- Независимая поправка к Сложности от модификаторов (v0.19, см. modifiers.js) ---
+  // Не входит в табличный расчёт выше — отдельная строка вида "+5 к Сложности (Название)"
+  // на каждый активный модификатор с ненулевым difficultyDelta.
+
+  _renderDifficultyModifiers(root, activeDifficultyMods) {
+    const row = root.querySelector(".fm-difficulty-mods-row");
+    const list = row.querySelector(".fm-difficulty-mods-list");
+
+    if (activeDifficultyMods.length === 0) {
+      row.hidden = true;
+      list.innerHTML = "";
+      return;
+    }
+
+    row.hidden = false;
+    list.innerHTML = activeDifficultyMods
+      .map((m) => `<li>${m.difficultyDelta > 0 ? "+" : ""}${m.difficultyDelta} к Сложности (${m.label})</li>`)
+      .join("");
+  }
+
   // --- Предпросмотр Чар: живое нарративное описание собираемого заклинания ---
   // Урон и Продолжительность — по одному сектору каждый. "Действует на..." объединяет сразу
   // три сектора (Целеуказание/Дистанция/Область) в одну фразу, как и было в примере запроса.
@@ -885,7 +915,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     const spendSum = Object.values(this.spendAllocations).reduce((a, arr) => a + arr.length, 0);
     const totalAvailable = ALL_SOURCES.reduce((a, s) => a + this._generatedBySource(s.key), 0);
     const modifiers = getActorModifiers(this.actor);
-    const modsCost = modifiers.reduce((a, m) => a + (this.modsOn[m.key] && m.cost > 0 ? m.cost : 0), 0);
+    const modsCost = modifiers.reduce((a, m) => a + (this.modsOn[m.key] && m.tokenCost > 0 ? m.tokenCost : 0), 0);
 
     // Положительная часть Корректировки ГМа — доп. стоимость, входит в требуемую сумму напрямую.
     // Отрицательная часть уже учтена через пул Токенов Маны (см. _generatedBySource) — второй раз не считаем,
@@ -909,11 +939,26 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       warning.hidden = true;
     }
 
+    // v0.19 — независимая от табличного расчёта поправка к Сложности от активных модификаторов
+    // (difficultyDelta, см. modifiers.js) — своя отдельная строка, не смешивается с DC из таблицы.
+    const activeDifficultyMods = modifiers.filter((m) => this.modsOn[m.key] && m.difficultyDelta !== 0);
+    const difficultyDeltaSum = activeDifficultyMods.reduce((a, m) => a + m.difficultyDelta, 0);
+
     this._renderDifficulty(root);
+    this._renderDifficultyModifiers(root, activeDifficultyMods);
     this._renderPreview(root);
     this._broadcastStateThrottled();
 
-    return { spendSum, modsCost, gmAdjust: this.gmAdjust, totalRequired, totalAvailable, remainder };
+    return {
+      spendSum,
+      modsCost,
+      gmAdjust: this.gmAdjust,
+      totalRequired,
+      totalAvailable,
+      remainder,
+      difficultyDeltaSum,
+      activeDifficultyMods
+    };
   }
 
   // --- Трансляция состояния для окна наблюдения ГМа (см. gm-watch.js/gm-viewer-app.js) ---
@@ -973,10 +1018,20 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     const modRows = getActorModifiers(this.actor)
       .filter((m) => this.modsOn[m.key])
       .map((m) => {
-        const desc = m.cost < 0 ? `даёт +${Math.abs(m.cost)} в Токены Маны` : `доп. стоимость ${m.cost}`;
+        const parts = [];
+        if (m.tokenCost < 0) parts.push(`даёт +${Math.abs(m.tokenCost)} в Токены Маны`);
+        else if (m.tokenCost > 0) parts.push(`доп. стоимость ${m.tokenCost}`);
+        if (m.difficultyDelta !== 0) parts.push(`${m.difficultyDelta > 0 ? "+" : ""}${m.difficultyDelta} к Сложности`);
+        const desc = parts.length ? parts.join("; ") : "без влияния на стоимость/сложность";
         return `<li>${m.label} (${desc})</li>`;
       })
       .join("");
+
+    const difficultyModsDesc = totals.activeDifficultyMods.length
+      ? totals.activeDifficultyMods
+          .map((m) => `${m.difficultyDelta > 0 ? "+" : ""}${m.difficultyDelta} (${m.label})`)
+          .join(", ")
+      : null;
 
     const gmAdjustDesc =
       totals.gmAdjust > 0
@@ -1004,6 +1059,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
         <p><strong>Итого требуется:</strong> ${totals.totalRequired} жетон(ов)</p>
         <p><strong>Остаток:</strong> ${totals.remainder}${totals.remainder < 0 ? " (перерасход!)" : ""}</p>
         <p><strong>Два Ключевых Направления:</strong> ${keyDirectionsDesc}</p>
+        ${difficultyModsDesc ? `<p><strong>Модификаторы Сложности:</strong> ${difficultyModsDesc}</p>` : ""}
         <p class="fm-difficulty-placeholder"><em>Ориентировочная категория — ${category.label} (Сложность ≈ ${category.dc}, Откат ≈ ${category.rollback}). Финальное слово за ГМ — с учётом нарративного веса и особых условий.</em></p>
       </div>
     `;

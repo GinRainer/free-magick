@@ -6,6 +6,8 @@ import { MODULE_ID, setBankValue, getBankStatus } from "./bank.js";
 import { registerSheetPanel } from "./sheet-panel.js";
 import { registerGmWatch } from "./gm-watch.js";
 import { registerResourceWidget } from "./resource-widget.js";
+import { ModifierDataModel, MODIFIER_TYPE } from "./modifiers.js";
+import { FreeMagicModifierSheet } from "./modifier-sheet.js";
 import * as SceneResource from "./scene-resource.js";
 
 Hooks.once("init", () => {
@@ -15,6 +17,19 @@ Hooks.once("init", () => {
   registerGmWatch();
   registerResourceWidget(); // v0.16 — Базовое отображение Ресурса Сцены, виден всем клиентам
   SceneResource.registerSceneResourceSettings(); // v0.14 — модель данных Ресурса Сцены (раздел 11), UI ещё впереди (v0.15+)
+
+  // v0.19 — регистрация Item sub-type "Модификатор" (free-magic.modifier, см. modifiers.js):
+  // настоящий тип предмета Foundry со своей DataModel, а не флаги поверх generic Item, как
+  // было в v0.18. Позволяет заводить такие предметы прямо в Skill Tree, как любой другой
+  // тип предмета системы. CONFIG.Item.dataModels — стандартный механизм регистрации схемы
+  // для module-defined sub-types (Foundry v11+); DocumentSheetConfig.registerSheet — привязка
+  // собственного листа именно к этому типу (см. modifier-sheet.js).
+  CONFIG.Item.dataModels[MODIFIER_TYPE] = ModifierDataModel;
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, MODULE_ID, FreeMagicModifierSheet, {
+    types: [MODIFIER_TYPE],
+    makeDefault: true,
+    label: "Лист Модификатора Магии"
+  });
 
   // Кнопка в стандартной вкладке Settings (Настройки игры → «Свободная Магия») — постоянный,
   // не зависящий от хотбара способ открыть окно GM Settings v2. Виден только ГМу (restricted).

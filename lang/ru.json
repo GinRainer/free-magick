@@ -1,5 +1,12 @@
 {
   "FREE_MAGIC.Title": "Круг Свободной Магии",
   "FREE_MAGIC.OpenButton": "Свободная Магия",
-  "FREE_MAGIC.Cast": "Сотворить"
+  "FREE_MAGIC.Cast": "Сотворить",
+  "TYPES": {
+    "Item": {
+      "free-magic": {
+        "modifier": "Модификатор Магии"
+      }
+    }
+  }
 }

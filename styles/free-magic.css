@@ -347,7 +347,9 @@
 }
 
 .fm-mods-hint { font-size: 11px; color: var(--fm-text-secondary); margin: 0; }
-.fm-mod-icon { width: 14px; height: 14px; }
+.fm-mod-icon { width: 14px; height: 14px; object-fit: contain; vertical-align: middle; }
+.fm-mod-badges { display: flex; gap: 4px; align-items: center; }
+.fm-mod-badge-difficulty { color: var(--fm-gold); }
 
 .fm-gm-row { display: flex; gap: 8px; }
 .fm-gm-value, .fm-gm-note, .fm-intent-text {
@@ -413,6 +415,16 @@
 
 .fm-difficulty-resource-row { padding: 4px 0 0; }
 .fm-difficulty-resource-text { font-size: 11px; color: var(--fm-text-secondary); font-style: italic; }
+
+.fm-difficulty-mods-row {
+  padding: 6px 0 0;
+  margin-top: 4px;
+  border-top: 1px dashed var(--fm-border);
+  font-size: 11px;
+}
+.fm-difficulty-mods-row span { color: var(--fm-text-secondary); }
+.fm-difficulty-mods-list { list-style: none; margin: 4px 0 0; padding: 0; color: var(--fm-gold); }
+.fm-difficulty-mods-list li { padding: 1px 0; }
 
 .fm-overspend-warning {
   margin: 8px 0 0;
@@ -890,7 +902,9 @@
   border-radius: 3px;
   padding: 1px 6px;
 }
-.fm-gmv-mod-icon { width: 14px; height: 14px; margin-right: 2px; vertical-align: middle; }
+.fm-gmv-mod-icon { width: 14px; height: 14px; margin-right: 2px; vertical-align: middle; object-fit: contain; }
+.fm-gmv-mod-badges { display: flex; gap: 4px; }
+.fm-gmv-mod-badge-difficulty { color: var(--fm-gold); }
 
 .fm-gmv-intent { color: var(--fm-text-secondary); font-style: italic; margin: 0; }
 .fm-gmv-hint { color: var(--fm-text-secondary); font-size: 11px; margin: 0; }
@@ -1106,22 +1120,9 @@
   display: inline-block;
 }
 
-.fm-sheet-modifier-icon { width: 14px; height: 14px; margin-right: 4px; vertical-align: middle; }
-
-/* Поле иконки + кнопка "Обзор..." в диалоге создания Модификатора (sheet-panel.js) */
-.fm-icon-field-row { display: flex; gap: 6px; align-items: center; }
-.fm-icon-field-row input { flex: 1; }
-.fm-icon-browse {
-  background: var(--fm-panel);
-  border: 1px solid var(--fm-border);
-  color: var(--fm-text);
-  border-radius: 4px;
-  width: 30px;
-  height: 26px;
-  cursor: pointer;
-  flex: 0 0 auto;
-}
-.fm-icon-browse:hover { background: var(--fm-panel-hover); }
+.fm-sheet-modifier-icon { width: 14px; height: 14px; margin-right: 4px; vertical-align: middle; object-fit: contain; }
+.fm-sheet-modifier-name { cursor: pointer; display: inline-flex; align-items: center; }
+.fm-sheet-modifier-name:hover { color: var(--fm-accent); }
 
 /* Кнопка "Обзор..." и превью иконки в Каталоге Элементов/Аспектов (resource-config-app.js) */
 .fmrc-icon-browse {
@@ -1136,3 +1137,88 @@
 }
 .fmrc-icon-browse:hover { background: var(--fm-panel-hover); }
 .fmrc-icon-preview { display: inline-flex; align-items: center; justify-content: center; width: 20px; flex: 0 0 auto; }
+
+/* --- v0.19: Лист Item-типа "Модификатор" (free-magic.modifier) ------------------------- */
+
+.free-magic-modifier-sheet {
+  --fm-bg: #17141f;
+  --fm-panel: #221f2e;
+  --fm-panel-hover: #2c2839;
+  --fm-border: #423c58;
+  --fm-accent: #9166ea;
+  --fm-accent-rgb: 145, 102, 234;
+  --fm-gold: #cda85f;
+  --fm-danger: #e5536b;
+  --fm-danger-rgb: 229, 83, 107;
+  --fm-text: #ece7f5;
+  --fm-text-secondary: #a196b8;
+
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  padding: 14px;
+  font-size: 13px;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+.free-magic-modifier-sheet * { box-sizing: border-box; }
+
+.fm-modsheet-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.fm-modsheet-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  border: 1px solid var(--fm-border);
+  cursor: pointer;
+  object-fit: cover;
+  background: var(--fm-panel);
+  flex: 0 0 auto;
+}
+.fm-modsheet-img:hover { border-color: var(--fm-accent); }
+.fm-modsheet-header input[name="name"] {
+  flex: 1;
+  background: var(--fm-panel);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fm-modsheet-section { margin-bottom: 14px; }
+.fm-modsheet-section h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fm-text-secondary);
+}
+.fm-modsheet-section textarea {
+  width: 100%;
+  background: var(--fm-panel);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.fm-modsheet-cost-row { margin-bottom: 8px; }
+.fm-modsheet-cost-row label { display: flex; flex-direction: column; gap: 4px; }
+.fm-modsheet-cost-row span { font-size: 11px; color: var(--fm-text-secondary); }
+.fm-modsheet-cost-row input {
+  width: 120px;
+  background: var(--fm-panel);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
