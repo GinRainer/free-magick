@@ -53,9 +53,10 @@ export function registerResourceWidget() {
     if (setting.key?.startsWith(`${MODULE_ID}.resource`)) renderWidget();
   });
 
-  // Если у актора, за которого играет этот пользователь, поменялся привязанный Элемент —
-  // может измениться то, что ему разрешено видеть/трогать в виджете.
- Hooks.on("updateActor", (actor, changes) => {
+  // Если у актора, за которого играет этот пользователь, поменялся привязанный Элемент, ИЛИ
+  // право видеть точный Фон (v0.17, флаг revealsBackground) — то, что этому клиенту разрешено
+  // видеть/трогать в виджете, могло измениться.
+  Hooks.on("updateActor", (actor, changes) => {
     if (actor.id !== game.user.character?.id) return;
     const relevant =
       foundry.utils.hasProperty(changes, `flags.${MODULE_ID}.elements`) ||
@@ -150,10 +151,13 @@ function viewerElementKeys() {
   const actor = game.user.character;
   return new Set(actor ? getActorElements(actor) : []);
 }
+
 /**
- * Может ли этот клиент видеть точное число Фона: ГМ — всегда; игрок — если персонажу,
- * за которого он играет, ГМ выставил чекбокс "Открывает Фон" (GM Settings → «Игроки»).
- * Действует глобально — не зависит от того, какую Сцену видит клиент прямо сейчас.
+ * Может ли этот клиент видеть точное число Фона (value/max + Нестабильность) вместо статусной
+ * строки: ГМ — всегда; игрок — если персонажу, за которого он играет, ГМ выставил чекбокс
+ * "Видит Фон" (GM Settings → «Игроки», v0.17). Действует глобально — не зависит от того,
+ * какую Сцену этот клиент видит прямо сейчас (сама величина Фона всё равно берётся для
+ * актуальной Сцены, см. renderWidget ниже — меняется только разрешение её увидеть).
  */
 function viewerRevealsBackground() {
   if (game.user.isGM) return true;
@@ -175,6 +179,9 @@ export function renderWidget() {
   const canSeeExactBackground = viewerRevealsBackground();
   const viewerKeys = viewerElementKeys();
 
+  // Точное число Фона по умолчанию видит только ГМ, либо игрок, которому ГМ явно открыл эту
+  // способность через чекбокс "Видит Фон" (см. viewerRevealsBackground, v0.17). Остальным —
+  // только статусная строка (Стабилен/Риск/На Грани/Нестабилен).
   const bgText = canSeeExactBackground
     ? `${status.value}/${status.max}${status.instability > 0 ? ` · Нестабильность ${status.instability}` : ""}`
     : status.stateLabel;

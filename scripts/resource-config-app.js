@@ -2,8 +2,9 @@
 // Три вкладки в одном окне:
 //  - «Каталог»  — мировой список Элементов/Аспектов (редко трогать)
 //  - «Эта сцена» — максимум Фона, какие Элементы активны и их стартовые значения
-//  - «Игроки»   — Элемент / Объём Сосуда (Максимум Цены) / Заклинательный Лимит на персонажа,
-//                 всё в одном месте (раньше Максимум Цены редактировался из окна Круга — убрано)
+//  - «Игроки»   — Элемент / Объём Сосуда (Максимум Цены) / Заклинательный Лимит / Видит Фон
+//                 (v0.17) на персонажа, всё в одном месте (раньше Максимум Цены редактировался
+//                 из окна Круга — убрано)
 
 import {
   getCatalog,
@@ -20,7 +21,9 @@ import {
   setResourceValue,
   setResourceMax,
   getActorElements,
-  setActorElements
+  setActorElements,
+  getActorRevealsBackground,
+  setActorRevealsBackground
 } from "./scene-resource.js";
 import { getPriceMax, setPriceMax, PRICE_MAX_CEILING } from "./paths.js";
 import { getAutoSpellcastLimit, getSpellcastLimitOverride, setSpellcastLimitOverride } from "./spellcast-limit.js";
@@ -332,8 +335,9 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
   }
 
   // =====================================================================================
-  // Вкладка «Игроки» — Элемент / Объём Сосуда / Заклинательный Лимит, всё в одном месте
-  // (раздел 13) — раньше Объём Сосуда (Максимум Цены) редактировался из окна Круга, убрано
+  // Вкладка «Игроки» — Элемент / Объём Сосуда / Заклинательный Лимит / Видит Фон (v0.17),
+  // всё в одном месте (раздел 13) — раньше Объём Сосуда (Максимум Цены) редактировался
+  // из окна Круга, убрано
   // =====================================================================================
 
   _playerCharacters() {
@@ -345,14 +349,7 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
 
   async _renderPlayersTab(root) {
     const panel = root.querySelector('[data-tab-panel="players"]');
-      const rows = actors.map((actor) => {
-      const currentElement = getActorElements(actor)[0] ?? "";
-      const priceMaxPromise = getPriceMax(actor);
-      const autoLimit = getAutoSpellcastLimit(actor);
-      const override = getSpellcastLimitOverride(actor);
-      const revealsBackground = getActorRevealsBackground(actor);
-      return { actor, currentElement, priceMaxPromise, autoLimit, override, revealsBackground };
-    });
+    const actors = this._playerCharacters();
     const catalog = getCatalog();
     const elementOptions = Object.values(catalog);
 
@@ -366,7 +363,8 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
       const priceMaxPromise = getPriceMax(actor);
       const autoLimit = getAutoSpellcastLimit(actor);
       const override = getSpellcastLimitOverride(actor);
-      return { actor, currentElement, priceMaxPromise, autoLimit, override };
+      const revealsBackground = getActorRevealsBackground(actor);
+      return { actor, currentElement, priceMaxPromise, autoLimit, override, revealsBackground };
     });
 
     const priceMaxValues = await Promise.all(rows.map((r) => r.priceMaxPromise));
@@ -376,7 +374,7 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
         <span>Персонаж</span>
         <span>Элемент</span>
         <span>Объём Сосуда</span>
-        <span>Заклинательный Лимит</span>
+        <span>Закл. Лимит</span>
         <span>Видит Фон</span>
       </div>
       <div class="fmrc-players-list">
@@ -400,13 +398,13 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
                    value="${r.override ?? ""}"
                    title="Пусто = берётся автоматически из @cast (сейчас: ${r.autoLimit ?? "нет"}). Введи число, чтобы переопределить вручную." />
             <input type="checkbox" class="fmrc-player-reveals-bg" ${r.revealsBackground ? "checked" : ""}
-                   title="Персонаж видит точное число Фона (value/max + Нестабильность) на любой Сцене, а не только статус." />
+                   title="Персонаж видит точное число Фона (value/max + Нестабильность) на любой Сцене вместо статусной строки." />
           </div>
         `
           )
           .join("")}
       </div>
-      <p class="fmrc-hint">Заклинательный Лимит по умолчанию подтягивается из подкласса персонажа (<code>@cast</code>) — поле оставь пустым, чтобы использовать это значение. Впиши число, только если нужно переопределить его вручную для конкретного персонажа.</p>
+      <p class="fmrc-hint">Заклинательный Лимит по умолчанию подтягивается из подкласса персонажа (<code>@cast</code>) — поле оставь пустым, чтобы использовать это значение. Впиши число, только если нужно переопределить его вручную для конкретного персонажа. «Видит Фон» — отдельное разрешение (v0.17): открывает персонажу точные цифры Магического Фона на любой Сцене, не только статус.</p>
     `;
 
     this._wirePlayersTab(root, panel);
@@ -426,13 +424,14 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
         const clamped = await setPriceMax(actor, ev.currentTarget.value);
         ev.currentTarget.value = clamped;
       });
-      row.querySelector(".fmrc-player-reveals-bg").addEventListener("change", async (ev) => {
-        await setActorRevealsBackground(actor, ev.currentTarget.checked);
-      });
 
       row.querySelector(".fmrc-player-limit").addEventListener("change", async (ev) => {
         const result = await setSpellcastLimitOverride(actor, ev.currentTarget.value);
         ev.currentTarget.value = result ?? "";
+      });
+
+      row.querySelector(".fmrc-player-reveals-bg").addEventListener("change", async (ev) => {
+        await setActorRevealsBackground(actor, ev.currentTarget.checked);
       });
     });
   }

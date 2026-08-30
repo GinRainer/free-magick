@@ -310,7 +310,10 @@ export function getActiveResourceList(sceneId = null) {
       aspects
     });
   }
-  // --- v0.17: Кто видит точный Фон (раздел 11.4) ---------------------------------------------
+  return elements;
+}
+
+// --- v0.17: Кто видит точный Фон (раздел 11.4) ---------------------------------------------
 //
 // Не завязано на конкретный Элемент/Аспект и не механизм на флагах Item (как бонусы Путей) —
 // это отдельное разрешение ГМа per-персонаж, редактируется чекбоксом в GM Settings → «Игроки»
@@ -329,6 +332,4 @@ export async function setActorRevealsBackground(actor, value) {
   const flag = Boolean(value);
   await actor.setFlag(MODULE_ID, REVEALS_BACKGROUND_FLAG, flag);
   return flag;
-}
-  return elements;
 }
