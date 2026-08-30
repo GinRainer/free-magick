@@ -14,6 +14,7 @@ import {
   getActorElements,
   getActorRevealsBackground
 } from "./scene-resource.js";
+import { renderIconHtml } from "./icon-utils.js";
 
 let widgetEl = null;
 let currentSceneId = null;
@@ -209,9 +210,10 @@ function renderElementBlock(element, viewerKeys, isGM) {
 
 function renderRow(entry, viewerKeys, isGM, cssClass) {
   const editable = canTouch(entry.id, viewerKeys, isGM);
+  const iconHtml = renderIconHtml(entry.icon, { title: entry.tooltip ?? "" });
   return `
     <div class="fmrw-row ${cssClass}" data-key="${entry.id}">
-      <i class="${entry.icon ?? ""}" title="${entry.tooltip ?? ""}"></i>
+      ${iconHtml}
       <span class="fmrw-label">${entry.label}</span>
       ${
         editable

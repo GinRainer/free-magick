@@ -27,6 +27,7 @@ import {
 } from "./scene-resource.js";
 import { getPriceMax, setPriceMax, PRICE_MAX_CEILING } from "./paths.js";
 import { getAutoSpellcastLimit, getSpellcastLimitOverride, setSpellcastLimitOverride } from "./spellcast-limit.js";
+import { renderIconHtml, browseForIconFile } from "./icon-utils.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -109,8 +110,9 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
     return `
       <div class="fmrc-catalog-element" data-element-id="${element.id}">
         <div class="fmrc-catalog-row">
-          <input type="text" class="fmrc-el-icon" value="${element.icon ?? ""}" placeholder="fa-solid fa-fire" title="Класс иконки FontAwesome" />
-          <i class="${element.icon ?? ""}"></i>
+          <input type="text" class="fmrc-el-icon" value="${element.icon ?? ""}" placeholder="fa-solid fa-fire или путь к файлу" title="Класс FontAwesome или путь к файлу-изображению из мира" />
+          <button type="button" class="fmrc-icon-browse" title="Выбрать файл из мира Foundry"><i class="fa-solid fa-folder-open"></i></button>
+          <span class="fmrc-icon-preview">${renderIconHtml(element.icon)}</span>
           <input type="text" class="fmrc-el-label" value="${element.label ?? ""}" placeholder="Название" />
           <button type="button" class="fmrc-el-remove" title="Удалить Элемент"><i class="fa-solid fa-trash"></i></button>
         </div>
@@ -130,8 +132,9 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
   _catalogAspectRow(elementId, aspect) {
     return `
       <div class="fmrc-catalog-aspect" data-element-id="${elementId}" data-aspect-id="${aspect.id}">
-        <input type="text" class="fmrc-as-icon" value="${aspect.icon ?? ""}" placeholder="fa-solid fa-..." />
-        <i class="${aspect.icon ?? ""}"></i>
+        <input type="text" class="fmrc-as-icon" value="${aspect.icon ?? ""}" placeholder="fa-solid fa-... или файл" />
+        <button type="button" class="fmrc-icon-browse" title="Выбрать файл из мира Foundry"><i class="fa-solid fa-folder-open"></i></button>
+        <span class="fmrc-icon-preview">${renderIconHtml(aspect.icon)}</span>
         <input type="text" class="fmrc-as-label" value="${aspect.label ?? ""}" placeholder="Название" />
         <input type="text" class="fmrc-as-tooltip" value="${aspect.tooltip ?? ""}" placeholder="Тултип" />
         <button type="button" class="fmrc-as-remove" title="Удалить Аспект"><i class="fa-solid fa-trash"></i></button>
@@ -156,6 +159,14 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
       row.querySelector(".fmrc-el-tooltip").addEventListener("change", async (ev) => {
         await upsertElement(elementId, { tooltip: ev.currentTarget.value });
       });
+      row.querySelector(":scope > .fmrc-catalog-row > .fmrc-icon-browse").addEventListener("click", () => {
+        const iconInput = row.querySelector(":scope > .fmrc-catalog-row > .fmrc-el-icon");
+        browseForIconFile(iconInput.value, async (path) => {
+          await upsertElement(elementId, { icon: path });
+          this._renderCatalogTab(root);
+          this._renderSceneTab(root);
+        });
+      });
       row.querySelector(".fmrc-el-remove").addEventListener("click", async () => {
         await removeElement(elementId);
         this._renderCatalogTab(root);
@@ -178,6 +189,14 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
         });
         aspectRow.querySelector(".fmrc-as-tooltip").addEventListener("change", async (ev) => {
           await upsertAspect(elementId, aspectId, { tooltip: ev.currentTarget.value });
+        });
+        aspectRow.querySelector(".fmrc-icon-browse").addEventListener("click", () => {
+          const iconInput = aspectRow.querySelector(".fmrc-as-icon");
+          browseForIconFile(iconInput.value, async (path) => {
+            await upsertAspect(elementId, aspectId, { icon: path });
+            this._renderCatalogTab(root);
+            this._renderSceneTab(root);
+          });
         });
         aspectRow.querySelector(".fmrc-as-remove").addEventListener("click", async () => {
           await removeAspect(elementId, aspectId);

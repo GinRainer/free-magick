@@ -1,5 +1,6 @@
 import { MODULE_ID } from "./bank.js";
-import { MODIFIERS } from "./modifiers.js";
+import { getActorModifiers } from "./modifiers.js";
+import { renderIconHtml } from "./icon-utils.js";
 import { PATHS, getManualPathPools, setManualPathPool, getItemBonusByPath, getPriceMax, setPriceMax, PRICE_MAX_CEILING } from "./paths.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -158,20 +159,29 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
     }
   }
 
-  // --- Модификаторы — можно включать/выключать удалённо, применяется на клиенте игрока
-  // через сокет-сообщение "gmSetModifier" (см. circle-app.js, _applyRemoteModifierChange). ---
+  // --- Модификаторы (v0.18 — Items на акторе, см. modifiers.js) — можно включать/выключать
+  // удалённо, применяется на клиенте игрока через сокет-сообщение "gmSetModifier"
+  // (см. circle-app.js, _applyRemoteModifierChange). ---
 
   _renderModifiers(root) {
     const list = root.querySelector(".fm-gmv-mods-list");
     const modsOn = this.state?.modsOn ?? {};
+    const modifiers = getActorModifiers(this.actor);
 
-    list.innerHTML = MODIFIERS.map((m) => {
+    if (modifiers.length === 0) {
+      list.innerHTML = `<p class="fm-gmv-hint">У персонажа нет предметов-модификаторов.</p>`;
+      return;
+    }
+
+    list.innerHTML = modifiers.map((m) => {
       const checked = Boolean(modsOn[m.key]);
       const badge = m.cost > 0 ? `-${m.cost}` : `+${Math.abs(m.cost)}`;
+      const iconHtml = m.icon ? renderIconHtml(m.icon, { className: "fm-gmv-mod-icon" }) : "";
       return `
         <label class="fm-gmv-mod-row">
           <span>
             <input type="checkbox" data-mod-key="${m.key}" ${checked ? "checked" : ""} />
+            ${iconHtml}
             ${m.label}
           </span>
           <span class="fm-gmv-mod-badge">${badge}</span>

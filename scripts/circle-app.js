@@ -1,7 +1,8 @@
 import { MODULE_ID, getBankStatus, setBankValue } from "./bank.js";
 import { FreeMagicBankConfig } from "./bank-config-app.js";
 import { PATHS, getItemBonusByPath, getPriceMax } from "./paths.js";
-import { MODIFIERS } from "./modifiers.js";
+import { getActorModifiers } from "./modifiers.js";
+import { renderIconHtml } from "./icon-utils.js";
 import { handleGmWatchMessage } from "./gm-watch.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -181,7 +182,11 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     // Параметры страницы «Докупить жетоны» — простые числа 0–4.
     this.grantTiers = Object.fromEntries(GRANT_SECTORS.map((s) => [s.key, 0]));
 
-    this.modsOn = Object.fromEntries(MODIFIERS.map((m) => [m.key, false]));
+    // Модификаторы (v0.18) — теперь Items на акторе (см. modifiers.js), заранее не известны
+    // конструктору, поэтому modsOn стартует пустым. Отсутствие ключа == "выключен" везде ниже
+    // (`this.modsOn[m.key]`), так что пустой объект — корректное начальное состояние для
+    // любого набора модификаторов, какой бы у актора ни оказался.
+    this.modsOn = {};
 
     this._listenersBound = false;
     this._preFullscreenPosition = null;
@@ -231,6 +236,22 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       this._loadPriceMax().then(() => this._renderPurchaseView(this.element.querySelector(".fm-purchase-view")));
       this._recalculate(this.element);
     });
+
+    // Модификаторы теперь тоже Items на акторе (v0.18) — если их добавили/удалили/поменяли
+    // прямо во время открытого Круга (например, через панель на листе персонажа), список
+    // должен обновиться сам, без перезакрытия окна.
+    const onModifierItemChange = (item) => {
+      if (item.parent?.id !== this.actor?.id) return;
+      if (!this.element) return;
+      this._renderModifiers(this.element);
+      this._renderPathsPanel(this.element); // пул Маны мог измениться
+      this._recalculate(this.element);
+    };
+    this._itemHooks = [
+      { name: "createItem", id: Hooks.on("createItem", onModifierItemChange) },
+      { name: "updateItem", id: Hooks.on("updateItem", onModifierItemChange) },
+      { name: "deleteItem", id: Hooks.on("deleteItem", onModifierItemChange) }
+    ];
   }
 
   // При закрытии окна — снимаем себя с учёта и сообщаем ГМу, что сборка завершена
@@ -238,6 +259,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
   async _onClose(options) {
     await super._onClose?.(options);
     if (this._updateActorHookId) Hooks.off("updateActor", this._updateActorHookId);
+    this._itemHooks?.forEach(({ name, id }) => Hooks.off(name, id));
     if (this.actor) {
       liveInstances.delete(this.actor.id);
       const buildClosedData = { action: "buildClosed", actorId: this.actor.id };
@@ -249,14 +271,16 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
   // Применяет к своему состоянию модификатор, включённый/выключенный ГМом удалённо
   // (см. socket-обработчик "gmSetModifier" выше), и обновляет собственный интерфейс.
   _applyRemoteModifierChange(modKey, value) {
-    if (!(modKey in this.modsOn)) return;
+    const modifiers = getActorModifiers(this.actor);
+    const mod = modifiers.find((m) => m.key === modKey);
+    if (!mod) return; // модификатор с таким id больше не существует у этого актора (удалён/переименован)
     this.modsOn[modKey] = Boolean(value);
     const root = this.element;
     if (!root) return;
     this._renderModifiers(root);
     this._renderPathsPanel(root);
     this._recalculate(root);
-    ui.notifications?.info(`ГМ изменил модификатор «${MODIFIERS.find((m) => m.key === modKey)?.label ?? modKey}»`);
+    ui.notifications?.info(`ГМ изменил модификатор «${mod.label}»`);
   }
 
   // --- Полноэкранный режим (кнопка внутри содержимого окна — надёжнее, чем API шапки, который не сработал) ---
@@ -374,7 +398,8 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
   // Сколько данный источник произвёл всего (для Путей — ручной пул; для Маны/Диких — по факту событий)
   _generatedBySource(key) {
     if (key === MANA_SOURCE.key) {
-      const modsGrant = MODIFIERS.filter((m) => this.modsOn[m.key] && m.cost < 0).reduce(
+      const modifiers = getActorModifiers(this.actor);
+      const modsGrant = modifiers.filter((m) => this.modsOn[m.key] && m.cost < 0).reduce(
         (a, m) => a + Math.abs(m.cost),
         0
       );
@@ -455,18 +480,27 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  // --- Модификаторы ---
+  // --- Модификаторы (v0.18 — читаются из Items на акторе, см. modifiers.js) ---
 
   _renderModifiers(root) {
     const list = root.querySelector(".fm-mods-list");
     list.innerHTML = "";
-    for (const mod of MODIFIERS) {
+    const modifiers = getActorModifiers(this.actor);
+
+    if (modifiers.length === 0) {
+      list.innerHTML = `<p class="fm-mods-hint">У персонажа нет предметов-модификаторов — добавьте их в панели «Пути Магии» на листе персонажа.</p>`;
+      return;
+    }
+
+    for (const mod of modifiers) {
       const row = document.createElement("label");
       row.classList.add("fm-mod-row");
       const badgeText = mod.cost < 0 ? `+${Math.abs(mod.cost)} → Мана` : `-${mod.cost}`;
+      const iconHtml = mod.icon ? renderIconHtml(mod.icon, { className: "fm-mod-icon" }) : "";
       row.innerHTML = `
         <span class="fm-mod-check">
           <input type="checkbox" data-key="${mod.key}" ${this.modsOn[mod.key] ? "checked" : ""}/>
+          ${iconHtml}
           ${mod.label}
         </span>
         <span class="fm-mod-badge">${badgeText}</span>
@@ -850,7 +884,8 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
   _recalculate(root) {
     const spendSum = Object.values(this.spendAllocations).reduce((a, arr) => a + arr.length, 0);
     const totalAvailable = ALL_SOURCES.reduce((a, s) => a + this._generatedBySource(s.key), 0);
-    const modsCost = MODIFIERS.reduce((a, m) => a + (this.modsOn[m.key] && m.cost > 0 ? m.cost : 0), 0);
+    const modifiers = getActorModifiers(this.actor);
+    const modsCost = modifiers.reduce((a, m) => a + (this.modsOn[m.key] && m.cost > 0 ? m.cost : 0), 0);
 
     // Положительная часть Корректировки ГМа — доп. стоимость, входит в требуемую сумму напрямую.
     // Отрицательная часть уже учтена через пул Токенов Маны (см. _generatedBySource) — второй раз не считаем,
@@ -935,7 +970,8 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       })
       .join("");
 
-    const modRows = MODIFIERS.filter((m) => this.modsOn[m.key])
+    const modRows = getActorModifiers(this.actor)
+      .filter((m) => this.modsOn[m.key])
       .map((m) => {
         const desc = m.cost < 0 ? `даёт +${Math.abs(m.cost)} в Токены Маны` : `доп. стоимость ${m.cost}`;
         return `<li>${m.label} (${desc})</li>`;

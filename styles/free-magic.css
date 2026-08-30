@@ -346,6 +346,9 @@
   white-space: nowrap;
 }
 
+.fm-mods-hint { font-size: 11px; color: var(--fm-text-secondary); margin: 0; }
+.fm-mod-icon { width: 14px; height: 14px; }
+
 .fm-gm-row { display: flex; gap: 8px; }
 .fm-gm-value, .fm-gm-note, .fm-intent-text {
   background: var(--fm-panel);
@@ -887,6 +890,7 @@
   border-radius: 3px;
   padding: 1px 6px;
 }
+.fm-gmv-mod-icon { width: 14px; height: 14px; margin-right: 2px; vertical-align: middle; }
 
 .fm-gmv-intent { color: var(--fm-text-secondary); font-style: italic; margin: 0; }
 .fm-gmv-hint { color: var(--fm-text-secondary); font-size: 11px; margin: 0; }
@@ -1089,3 +1093,46 @@
 }
 .fmrw-btn:hover { background: var(--fm-accent); color: var(--fm-bg); }
 .fmrw-empty-hint { color: var(--fm-text-secondary); font-size: 11px; margin: 4px 0 0; }
+
+/* --- v0.18: Иконки-файлы из мира Foundry (наравне с классами FontAwesome) -----------------
+   Общее правило без привязки к CSS-переменным конкретного окна — используется во всех
+   контекстах модуля (виджет Ресурса, панель листа, окно Круга, окно наблюдения ГМа,
+   Каталог в GM Settings), см. icon-utils.js (renderIconHtml). */
+.fm-icon-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.fm-sheet-modifier-icon { width: 14px; height: 14px; margin-right: 4px; vertical-align: middle; }
+
+/* Поле иконки + кнопка "Обзор..." в диалоге создания Модификатора (sheet-panel.js) */
+.fm-icon-field-row { display: flex; gap: 6px; align-items: center; }
+.fm-icon-field-row input { flex: 1; }
+.fm-icon-browse {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text);
+  border-radius: 4px;
+  width: 30px;
+  height: 26px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.fm-icon-browse:hover { background: var(--fm-panel-hover); }
+
+/* Кнопка "Обзор..." и превью иконки в Каталоге Элементов/Аспектов (resource-config-app.js) */
+.fmrc-icon-browse {
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text);
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.fmrc-icon-browse:hover { background: var(--fm-panel-hover); }
+.fmrc-icon-preview { display: inline-flex; align-items: center; justify-content: center; width: 20px; flex: 0 0 auto; }

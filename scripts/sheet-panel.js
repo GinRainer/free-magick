@@ -1,4 +1,6 @@
 import { MODULE_ID, PATHS, getItemBonusByPath, getPathBonusItems, getManualPathPools, setManualPathPool, getTotalPathPool } from "./paths.js";
+import { getModifierItems } from "./modifiers.js";
+import { renderIconHtml, browseForIconFile } from "./icon-utils.js";
 
 // Открытые/закрытые панели держим в памяти клиента (не персистентно — просто чтобы при
 // каждом перерендере листа персонажа (а Foundry делает это часто, на любое изменение актора)
@@ -146,6 +148,7 @@ function injectPanel(app, htmlEl) {
   });
 
   renderPathsList(panel.querySelector(".fm-sheet-paths-list"), actor);
+  renderModifiersList(panel.querySelector(".fm-sheet-modifiers-list"), actor);
 }
 
 async function renderPathsList(container, actor) {
@@ -280,4 +283,133 @@ function openAddBonusDialog(actor, path) {
       { action: "cancel", label: "Отмена" }
     ]
   }).render(true);
+}
+
+// --- Модификаторы (v0.18) — тот же принцип, что и бонус-предметы Путей выше: обычный Item
+// с флагами free-magic.isModifier/modifierCost/modifierIcon, читается centrally в modifiers.js.
+
+function renderModifiersList(container, actor) {
+  if (!container) return;
+  const items = getModifierItems(actor);
+
+  container.innerHTML = `
+    <button type="button" class="fm-sheet-add-bonus fm-sheet-add-modifier" title="Добавить новый модификатор">
+      <i class="fa-solid fa-plus"></i> Модификатор
+    </button>
+    ${
+      items.length
+        ? `<ul class="fm-sheet-bonus-list">${items
+            .map((i) => {
+              const cost = Number(i.getFlag(MODULE_ID, "modifierCost")) || 0;
+              const icon = i.getFlag(MODULE_ID, "modifierIcon") ?? "";
+              const badge = cost < 0 ? `+${Math.abs(cost)} → Мана` : `-${cost}`;
+              const iconHtml = icon ? renderIconHtml(icon, { className: "fm-sheet-modifier-icon" }) : "";
+              return `<li>${iconHtml}<span>${i.name} (${badge})</span><button type="button" class="fm-sheet-bonus-remove" data-item-id="${i.id}" title="Удалить предмет"><i class="fa-solid fa-xmark"></i></button></li>`;
+            })
+            .join("")}</ul>`
+        : `<p class="fm-sheet-hint">Модификаторов пока нет — добавьте кнопкой выше.</p>`
+    }
+  `;
+
+  container.querySelector(".fm-sheet-add-modifier").addEventListener("click", () => {
+    openAddModifierDialog(actor, container);
+  });
+
+  container.querySelectorAll(".fm-sheet-bonus-remove").forEach((btn) => {
+    btn.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const itemId = btn.dataset.itemId;
+      await actor.deleteEmbeddedDocuments("Item", [itemId]);
+      renderModifiersList(container, actor);
+    });
+  });
+}
+
+// Диалог создания модификатора — название, стоимость (может быть отрицательной), необязательная
+// иконка. Поле иконки принимает и класс FontAwesome, и путь к файлу — либо вписать вручную,
+// либо кнопкой "Обзор..." открыть штатный FilePicker Foundry (см. icon-utils.js).
+function openAddModifierDialog(actor, listContainer) {
+  const content = `
+    <form class="fm-modifier-dialog">
+      <div class="form-group">
+        <label>Название модификатора</label>
+        <input type="text" name="name" value="Новый модификатор" />
+      </div>
+      <div class="form-group">
+        <label>Стоимость (отрицательное = даёт Ману, положительное = доп. стоимость)</label>
+        <input type="number" name="cost" step="1" value="1" />
+      </div>
+      <div class="form-group">
+        <label>Иконка (необязательно) — класс FontAwesome или файл</label>
+        <div class="fm-icon-field-row">
+          <input type="text" name="icon" placeholder="fa-solid fa-star или путь к файлу" />
+          <button type="button" class="fm-icon-browse" title="Выбрать файл из мира Foundry">
+            <i class="fa-solid fa-folder-open"></i>
+          </button>
+        </div>
+      </div>
+    </form>
+  `;
+
+  const dialog = new foundry.applications.api.DialogV2({
+    window: { title: "Новый модификатор" },
+    content,
+    buttons: [
+      {
+        action: "create",
+        label: "Создать",
+        default: true,
+        callback: async (event, button) => {
+          const form = button.form;
+          const name = form.elements.name.value || "Новый модификатор";
+          const cost = Math.floor(Number(form.elements.cost.value)) || 0;
+          const icon = form.elements.icon.value.trim();
+
+          const validTypes =
+            game.documentTypes?.Item ??
+            Object.keys(CONFIG.Item?.dataModels ?? {}) ??
+            Object.keys(CONFIG.Item?.typeLabels ?? {}) ??
+            [];
+          const itemType = validTypes.includes("feature") ? "feature" : validTypes[0];
+
+          if (!itemType) {
+            ui.notifications?.error("Не удалось определить тип предмета в этой системе. Сообщите об ошибке разработчику модуля.");
+            return;
+          }
+
+          try {
+            await actor.createEmbeddedDocuments("Item", [
+              {
+                name,
+                type: itemType,
+                flags: {
+                  [MODULE_ID]: { isModifier: true, modifierCost: cost, modifierIcon: icon }
+                }
+              }
+            ]);
+            renderModifiersList(listContainer, actor);
+          } catch (err) {
+            console.error("Free Magic | Не удалось создать предмет-модификатор", err);
+            ui.notifications?.error(`Не удалось создать предмет (тип "${itemType}"). Подробности в консоли (F12).`);
+          }
+        }
+      },
+      { action: "cancel", label: "Отмена" }
+    ]
+  });
+
+  dialog.render(true);
+
+  // Кнопка "Обзор..." появится в DOM только после рендера диалога — вешаем слушатель отдельно,
+  // через небольшую задержку до следующего тика, т.к. DialogV2 рендерит content асинхронно.
+  Hooks.once("renderDialogV2", (app) => {
+    if (app !== dialog) return;
+    const iconInput = app.element.querySelector('input[name="icon"]');
+    const browseBtn = app.element.querySelector(".fm-icon-browse");
+    browseBtn?.addEventListener("click", () => {
+      browseForIconFile(iconInput?.value, (path) => {
+        if (iconInput) iconInput.value = path;
+      });
+    });
+  });
 }
