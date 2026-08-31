@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./bank.js";
-import { getActorModifiers } from "./modifiers.js";
+import { getEffectiveModifiers, renderTierStars } from "./modifiers.js";
 import { PATHS, getManualPathPools, setManualPathPool, getItemBonusByPath, getPriceMax, setPriceMax, PRICE_MAX_CEILING } from "./paths.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -158,17 +158,17 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
     }
   }
 
-  // --- Модификаторы (v0.18 — Items на акторе, см. modifiers.js) — можно включать/выключать
-  // удалённо, применяется на клиенте игрока через сокет-сообщение "gmSetModifier"
-  // (см. circle-app.js, _applyRemoteModifierChange). ---
+  // --- Модификаторы (v0.20 — личные + общие, 3 уровня освоения, см. modifiers.js) — можно
+  // включать/выключать удалённо, применяется на клиенте игрока через сокет-сообщение
+  // "gmSetModifier" (см. circle-app.js, _applyRemoteModifierChange). ---
 
   _renderModifiers(root) {
     const list = root.querySelector(".fm-gmv-mods-list");
     const modsOn = this.state?.modsOn ?? {};
-    const modifiers = getActorModifiers(this.actor);
+    const modifiers = getEffectiveModifiers(this.actor);
 
     if (modifiers.length === 0) {
-      list.innerHTML = `<p class="fm-gmv-hint">У персонажа нет предметов-модификаторов.</p>`;
+      list.innerHTML = `<p class="fm-gmv-hint">У персонажа нет доступных модификаторов.</p>`;
       return;
     }
 
@@ -176,12 +176,14 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
       const checked = Boolean(modsOn[m.key]);
       const tokenBadge = m.tokenCost > 0 ? `-${m.tokenCost}` : m.tokenCost < 0 ? `+${Math.abs(m.tokenCost)}` : "";
       const difficultyBadge = m.difficultyDelta !== 0 ? `${m.difficultyDelta > 0 ? "+" : ""}${m.difficultyDelta} Слож.` : "";
+      const globalTag = m.isGlobal ? `<span class="fm-gmv-mod-global-tag">Общий</span>` : "";
       return `
-        <label class="fm-gmv-mod-row">
+        <label class="fm-gmv-mod-row fm-gmv-mod-row-tier-${m.currentTier}">
           <span>
             <input type="checkbox" data-mod-key="${m.key}" ${checked ? "checked" : ""} />
             <img class="fm-gmv-mod-icon" src="${m.icon}" alt="" />
-            ${m.label}
+            ${m.label}${globalTag}
+            ${renderTierStars(m.currentTier, { className: "fm-gmv-mod-stars" })}
           </span>
           <span class="fm-gmv-mod-badges">
             ${tokenBadge ? `<span class="fm-gmv-mod-badge">${tokenBadge}</span>` : ""}

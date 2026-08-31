@@ -1,10 +1,11 @@
 // v0.15 — Окно настройки ГМа v2 (раздел 11.3 / 13 дизайн-документа).
-// Три вкладки в одном окне:
+// Четыре вкладки в одном окне:
 //  - «Каталог»  — мировой список Элементов/Аспектов (редко трогать)
 //  - «Эта сцена» — максимум Фона, какие Элементы активны и их стартовые значения
 //  - «Игроки»   — Элемент / Объём Сосуда (Максимум Цены) / Заклинательный Лимит / Видит Фон
 //                 (v0.17) на персонажа, всё в одном месте (раньше Максимум Цены редактировался
 //                 из окна Круга — убрано)
+//  - «Модификаторы» (v0.20) — ОБЩИЕ модификаторы, доступные сразу всем персонажам
 
 import {
   getCatalog,
@@ -28,6 +29,7 @@ import {
 import { getPriceMax, setPriceMax, PRICE_MAX_CEILING } from "./paths.js";
 import { getAutoSpellcastLimit, getSpellcastLimitOverride, setSpellcastLimitOverride } from "./spellcast-limit.js";
 import { renderIconHtml, browseForIconFile } from "./icon-utils.js";
+import { getGlobalModifierItems, createGlobalModifierItem, renderTierStars } from "./modifiers.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -65,6 +67,7 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
     this._renderCatalogTab(root);
     this._renderSceneTab(root);
     await this._renderPlayersTab(root);
+    this._renderModifiersTab(root);
   }
 
   _switchTab(root, tab) {
@@ -451,6 +454,78 @@ export class FreeMagicResourceConfig extends HandlebarsApplicationMixin(Applicat
 
       row.querySelector(".fmrc-player-reveals-bg").addEventListener("change", async (ev) => {
         await setActorRevealsBackground(actor, ev.currentTarget.checked);
+      });
+    });
+  }
+
+  // =====================================================================================
+  // Вкладка «Модификаторы» (v0.20) — ОБЩИЕ модификаторы: мировые Items (без актора-владельца,
+  // см. modifiers.js: createGlobalModifierItem/getGlobalModifierItems), автоматически
+  // подмешиваются в Круг КАЖДОГО персонажа (getEffectiveModifiers), кроме тех, у кого уже
+  // есть личный модификатор с тем же названием (личный побеждает — см. modifiers.js).
+  // =====================================================================================
+
+  _renderModifiersTab(root) {
+    const panel = root.querySelector('[data-tab-panel="modifiers"]');
+    const items = getGlobalModifierItems();
+
+    panel.innerHTML = `
+      <p class="fmrc-hint">Общие модификаторы доступны в Круге у ВСЕХ персонажей сразу — не нужно добавлять их каждому вручную. Если у игрока уже есть личный модификатор с тем же названием, здесь показанный — общий — в его Круге не появится (личный полностью его заменяет).</p>
+      <div class="fmrc-modifiers-list">
+        ${
+          items.length
+            ? items.map((i) => this._globalModifierRow(i)).join("")
+            : `<p class="fmrc-hint">Общих модификаторов пока нет — добавьте кнопкой ниже.</p>`
+        }
+      </div>
+      <div class="fmrc-add-row">
+        <button type="button" class="fmrc-add-global-modifier"><i class="fa-solid fa-plus"></i> Добавить общий модификатор</button>
+      </div>
+    `;
+
+    this._wireModifiersTab(root, panel);
+  }
+
+  _globalModifierRow(item) {
+    const currentTier = Math.max(1, Math.min(3, Number(item.system?.currentTier) || 1));
+    const tierData = item.system?.[`tier${currentTier}`] ?? { tokenCost: 0, difficultyDelta: 0 };
+    const tokenCost = Number(tierData.tokenCost) || 0;
+    const difficultyDelta = Number(tierData.difficultyDelta) || 0;
+    const badges = [];
+    if (tokenCost < 0) badges.push(`+${Math.abs(tokenCost)} Мана`);
+    else if (tokenCost > 0) badges.push(`-${tokenCost} жет.`);
+    if (difficultyDelta !== 0) badges.push(`${difficultyDelta > 0 ? "+" : ""}${difficultyDelta} Слож.`);
+
+    return `
+      <div class="fmrc-modifier-row" data-item-id="${item.id}" title="Открыть лист предмета">
+        <img class="fmrc-modifier-icon" src="${item.img}" alt="" />
+        <span class="fmrc-modifier-name">${item.name}</span>
+        ${renderTierStars(currentTier, { className: "fmrc-modifier-stars" })}
+        <span class="fmrc-modifier-badges">${badges.join(", ")}</span>
+        <button type="button" class="fmrc-modifier-remove" data-item-id="${item.id}" title="Удалить"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    `;
+  }
+
+  _wireModifiersTab(root, panel) {
+    panel.querySelector(".fmrc-add-global-modifier").addEventListener("click", async () => {
+      const item = await createGlobalModifierItem();
+      item?.sheet?.render(true);
+      this._renderModifiersTab(root);
+    });
+
+    panel.querySelectorAll(".fmrc-modifier-row[data-item-id]").forEach((row) => {
+      row.addEventListener("click", (ev) => {
+        if (ev.target.closest(".fmrc-modifier-remove")) return;
+        game.items.get(row.dataset.itemId)?.sheet?.render(true);
+      });
+    });
+
+    panel.querySelectorAll(".fmrc-modifier-remove").forEach((btn) => {
+      btn.addEventListener("click", async (ev) => {
+        ev.stopPropagation();
+        await game.items.get(btn.dataset.itemId)?.delete();
+        this._renderModifiersTab(root);
       });
     });
   }

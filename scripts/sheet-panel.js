@@ -1,10 +1,15 @@
 import { MODULE_ID, PATHS, getItemBonusByPath, getPathBonusItems, getManualPathPools, setManualPathPool, getTotalPathPool } from "./paths.js";
-import { getModifierItems, createModifierItem } from "./modifiers.js";
+import { getModifierItems, createModifierItem, getEffectiveModifiers, renderTierStars } from "./modifiers.js";
+import { renderIconHtml } from "./icon-utils.js";
+import { getActorElements, findCatalogEntry } from "./scene-resource.js";
+import { getMagicCircle, setMagicCircle, getMagicType, setMagicType, getMagicTypeLabel, MAGIC_TYPES } from "./actor-profile.js";
+import { getAutoSpellcastLimit, getSpellcastLimitOverride, setSpellcastLimitOverride, getSpellcastLimit } from "./spellcast-limit.js";
 
-// Открытые/закрытые панели держим в памяти клиента (не персистентно — просто чтобы при
-// каждом перерендере листа персонажа (а Foundry делает это часто, на любое изменение актора)
-// панель не схлопывалась обратно сама по себе, если пользователь её открыл.
+// Открытые/закрытые панели и активная вкладка держим в памяти клиента (не персистентно —
+// просто чтобы при каждом перерендере листа персонажа (а Foundry делает это часто, на любое
+// изменение актора) панель не схлопывалась и не сбрасывала вкладку сама по себе.
 const openState = new Map(); // actorId -> boolean
+const activeTabState = new Map(); // actorId -> "paths" | "modifiers"
 
 // Тот же приём, что и для кнопки в шапке листа (see free-magic.js): подписываемся на несколько
 // вероятных имён хуков, т.к. неизвестно заранее, какой из них выстрелит для конкретного листа.
@@ -39,11 +44,25 @@ export function registerSheetPanel() {
       }
     });
   }
+
+  // v0.20: если ГМ поменял Общий модификатор (мировой Item) прямо в Настройке ГМа, вкладка
+  // «Модификаторы» на уже открытых панелях листов должна обновиться сама.
+  const onGlobalModifierChange = (item) => {
+    if (item.parent) return; // это личный предмет актора, не мировой — его обрабатывает injectPanel
+    document.querySelectorAll(".free-magic-sheet-panel[data-actor-id]").forEach((panelEl) => {
+      const actor = game.actors?.get(panelEl.dataset.actorId);
+      if (!actor) return;
+      renderModifiersTab(panelEl.querySelector(".fm-sheet-modifiers-tab-body"), actor);
+    });
+  };
+  Hooks.on("createItem", onGlobalModifierChange);
+  Hooks.on("updateItem", onGlobalModifierChange);
+  Hooks.on("deleteItem", onGlobalModifierChange);
 }
 
 // Собственные окна модуля (Круг, настройка Банка) тоже проходят через renderApplicationV2
 // и тоже имеют свойство .actor — см. подробный комментарий в free-magic.js.
-const OWN_APP_IDS = new Set(["free-magic-circle", "free-magic-bank-config", "free-magic-gm-viewer"]);
+const OWN_APP_IDS = new Set(["free-magic-circle", "free-magic-bank-config", "free-magic-gm-viewer", "free-magic-resource-config"]);
 
 function injectPanel(app, htmlEl) {
   if (OWN_APP_IDS.has(app.id)) return; // это наше собственное окно, не лист персонажа
@@ -146,9 +165,98 @@ function injectPanel(app, htmlEl) {
     toggleBtn.classList.remove("fm-active");
   });
 
+  wireTabs(panel, actor);
+  renderProfileRow(panel.querySelector(".fm-sheet-profile-row"), actor);
   renderPathsList(panel.querySelector(".fm-sheet-paths-list"), actor);
-  renderModifiersList(panel.querySelector(".fm-sheet-modifiers-list"), actor);
+  renderModifiersTab(panel.querySelector(".fm-sheet-modifiers-tab-body"), actor);
 }
+
+// --- Вкладки «Пути Магии» / «Модификаторы» (v0.20) ------------------------------------------
+
+function wireTabs(panel, actor) {
+  const tabButtons = panel.querySelectorAll(".fm-sheet-tab-btn");
+  const panels = panel.querySelectorAll(".fm-sheet-tab-panel");
+  const activeTab = activeTabState.get(actor.id) ?? "paths";
+
+  const applyTab = (tab) => {
+    tabButtons.forEach((btn) => btn.classList.toggle("fm-sheet-tab-active", btn.dataset.tab === tab));
+    panels.forEach((p) => {
+      p.hidden = p.dataset.tabPanel !== tab;
+    });
+  };
+  applyTab(activeTab);
+
+  tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activeTabState.set(actor.id, btn.dataset.tab);
+      applyTab(btn.dataset.tab);
+    });
+  });
+}
+
+// --- Строка профиля наверху вкладки «Пути Магии» (v0.20) ------------------------------------
+// Элемент — только чтение (назначается в GM Settings → «Игроки», см. scene-resource.js).
+// Круг / Тип / переопределение Заклинательного Лимита — редактирует ТОЛЬКО ГМ, игрок видит
+// итоговое значение без права правки (тот же принцип, что уже применён к Максимуму Цены).
+
+function renderProfileRow(container, actor) {
+  if (!container) return;
+  const isGM = game.user.isGM;
+
+  // Элемент
+  const elementId = getActorElements(actor)[0];
+  const elementEntry = elementId ? findCatalogEntry(elementId)?.entry : null;
+  const elementValueEl = container.querySelector('[data-field="element"] .fm-sheet-profile-value');
+  elementValueEl.innerHTML = elementEntry
+    ? `${renderIconHtml(elementEntry.icon, { className: "fm-sheet-profile-icon" })}${elementEntry.label}`
+    : `<span class="fm-sheet-profile-empty">— не назначен</span>`;
+
+  // Круг (эквивалент уровня, по умолчанию 3)
+  const circleValueEl = container.querySelector('[data-field="circle"] .fm-sheet-profile-value');
+  const circle = getMagicCircle(actor);
+  if (isGM) {
+    circleValueEl.innerHTML = `<input type="number" class="fm-sheet-profile-input" min="1" value="${circle}" />`;
+    circleValueEl.querySelector("input").addEventListener("change", async (ev) => {
+      const clamped = await setMagicCircle(actor, ev.currentTarget.value);
+      ev.currentTarget.value = clamped;
+    });
+  } else {
+    circleValueEl.textContent = circle;
+  }
+
+  // Тип (Одарённый / Маг / Проводник / Нет Типа)
+  const typeValueEl = container.querySelector('[data-field="type"] .fm-sheet-profile-value');
+  const type = getMagicType(actor);
+  if (isGM) {
+    typeValueEl.innerHTML = `<select class="fm-sheet-profile-select">
+      ${MAGIC_TYPES.map((t) => `<option value="${t.key}" ${t.key === type ? "selected" : ""}>${t.label}</option>`).join("")}
+    </select>`;
+    typeValueEl.querySelector("select").addEventListener("change", async (ev) => {
+      await setMagicType(actor, ev.currentTarget.value);
+    });
+  } else {
+    typeValueEl.textContent = getMagicTypeLabel(type);
+  }
+
+  // Заклинательный Лимит — по умолчанию из @cast, переопределение правит только ГМ
+  const limitValueEl = container.querySelector('[data-field="limit"] .fm-sheet-profile-value');
+  const autoLimit = getAutoSpellcastLimit(actor);
+  if (isGM) {
+    const override = getSpellcastLimitOverride(actor);
+    limitValueEl.innerHTML = `<input type="number" class="fm-sheet-profile-input" min="0"
+      placeholder="${autoLimit ?? "нет @cast"}" value="${override ?? ""}"
+      title="Пусто = автоматически из @cast (сейчас: ${autoLimit ?? "нет"})" />`;
+    limitValueEl.querySelector("input").addEventListener("change", async (ev) => {
+      const result = await setSpellcastLimitOverride(actor, ev.currentTarget.value);
+      ev.currentTarget.value = result ?? "";
+    });
+  } else {
+    const effective = getSpellcastLimit(actor);
+    limitValueEl.textContent = effective ?? "—";
+  }
+}
+
+// --- Токены Путей (без изменений по сути, просто теперь внутри вкладки) --------------------
 
 async function renderPathsList(container, actor) {
   if (!container) return;
@@ -284,43 +392,89 @@ function openAddBonusDialog(actor, path) {
   }).render(true);
 }
 
-// --- Модификаторы (v0.19) — настоящий Item sub-type free-magic.modifier (см. modifiers.js),
-// а не флаги поверх generic Item, как было в v0.18. Хранятся в инвентаре актора, но видны
-// только здесь — обычный лист персонажа/Sleek UI не знает об этом типе (как и договорились,
-// "хранить в разделе Пути Магии" — это и есть тот самый раздел).
+// --- Вкладка «Модификаторы» (v0.20) — личные (полное управление) + общие (только просмотр,
+// настраиваются ГМом в отдельной вкладке окна Настройки, см. resource-config-app.js) --------
 
-function renderModifiersList(container, actor) {
+function modifierBadgesHtml(tokenCost, difficultyDelta) {
+  const badges = [];
+  if (tokenCost < 0) badges.push(`<span class="fm-sheet-mod-badge">+${Math.abs(tokenCost)} Мана</span>`);
+  else if (tokenCost > 0) badges.push(`<span class="fm-sheet-mod-badge">-${tokenCost} жет.</span>`);
+  if (difficultyDelta !== 0) {
+    badges.push(
+      `<span class="fm-sheet-mod-badge fm-sheet-mod-badge-difficulty">${difficultyDelta > 0 ? "+" : ""}${difficultyDelta} Слож.</span>`
+    );
+  }
+  return badges.join("");
+}
+
+function renderPersonalModifierCard(item) {
+  const currentTier = Math.max(1, Math.min(3, Number(item.system?.currentTier) || 1));
+  const tierData = item.system?.[`tier${currentTier}`] ?? { tokenCost: 0, difficultyDelta: 0 };
+  const badges = modifierBadgesHtml(Number(tierData.tokenCost) || 0, Number(tierData.difficultyDelta) || 0);
+
+  return `
+    <div class="fm-sheet-mod-card fm-sheet-mod-card-tier-${currentTier}" data-item-id="${item.id}" title="Открыть лист предмета">
+      <img class="fm-sheet-mod-card-icon" src="${item.img}" alt="" />
+      <div class="fm-sheet-mod-card-main">
+        <div class="fm-sheet-mod-card-name">${item.name}</div>
+        ${renderTierStars(currentTier, { className: "fm-sheet-mod-card-stars" })}
+        <div class="fm-sheet-mod-card-badges">${badges}</div>
+      </div>
+      <button type="button" class="fm-sheet-mod-remove" data-item-id="${item.id}" title="Удалить предмет">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  `;
+}
+
+function renderGlobalModifierCard(mod) {
+  const badges = modifierBadgesHtml(mod.tokenCost, mod.difficultyDelta);
+  return `
+    <div class="fm-sheet-mod-card fm-sheet-mod-card-tier-${mod.currentTier} fm-sheet-mod-card-readonly">
+      <img class="fm-sheet-mod-card-icon" src="${mod.icon}" alt="" />
+      <div class="fm-sheet-mod-card-main">
+        <div class="fm-sheet-mod-card-name">${mod.label} <span class="fm-mod-global-tag">Общий</span></div>
+        ${renderTierStars(mod.currentTier, { className: "fm-sheet-mod-card-stars" })}
+        <div class="fm-sheet-mod-card-badges">${badges}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderModifiersTab(container, actor) {
   if (!container) return;
-  const items = getModifierItems(actor);
+  const personalItems = getModifierItems(actor);
+  // getEffectiveModifiers уже сама убирает Общие, у которых есть личный тёзка (см. modifiers.js)
+  const globalOnly = getEffectiveModifiers(actor).filter((m) => m.isGlobal);
 
   container.innerHTML = `
-    <button type="button" class="fm-sheet-add-bonus fm-sheet-add-modifier" title="Создать новый предмет-модификатор">
-      <i class="fa-solid fa-plus"></i> Модификатор
-    </button>
-    ${
-      items.length
-        ? `<ul class="fm-sheet-bonus-list fm-sheet-modifier-list">${items
-            .map((i) => {
-              const tokenCost = Number(i.system?.tokenCost) || 0;
-              const difficultyDelta = Number(i.system?.difficultyDelta) || 0;
-              const badges = [];
-              if (tokenCost < 0) badges.push(`+${Math.abs(tokenCost)} Мана`);
-              else if (tokenCost > 0) badges.push(`-${tokenCost} жет.`);
-              if (difficultyDelta !== 0) badges.push(`${difficultyDelta > 0 ? "+" : ""}${difficultyDelta} Слож.`);
-              const badgeText = badges.length ? ` (${badges.join(", ")})` : "";
-              return `
-                <li data-item-id="${i.id}">
-                  <span class="fm-sheet-modifier-name" data-item-id="${i.id}" title="Открыть лист предмета">
-                    <img class="fm-sheet-modifier-icon" src="${i.img}" alt="" />
-                    ${i.name}${badgeText}
-                  </span>
-                  <button type="button" class="fm-sheet-bonus-remove" data-item-id="${i.id}" title="Удалить предмет"><i class="fa-solid fa-xmark"></i></button>
-                </li>
-              `;
-            })
-            .join("")}</ul>`
-        : `<p class="fm-sheet-hint">Модификаторов пока нет — добавьте кнопкой выше.</p>`
-    }
+    <div class="fm-sheet-mods-section">
+      <div class="fm-sheet-mods-section-head">
+        <h3>Личные модификаторы</h3>
+        <button type="button" class="fm-sheet-add-modifier" title="Создать новый предмет-модификатор">
+          <i class="fa-solid fa-plus"></i> Модификатор
+        </button>
+      </div>
+      <p class="fm-sheet-hint">Клик по карточке — открыть лист предмета (там настраиваются все три уровня освоения). Личный модификатор с тем же названием, что и Общий, полностью его заменяет.</p>
+      <div class="fm-sheet-mods-cards">
+        ${
+          personalItems.length
+            ? personalItems.map((i) => renderPersonalModifierCard(i)).join("")
+            : `<p class="fm-sheet-hint">Личных модификаторов пока нет — добавьте кнопкой выше.</p>`
+        }
+      </div>
+    </div>
+
+    <div class="fm-sheet-mods-section">
+      <h3>Общие модификаторы <span class="fm-sheet-mods-hint-inline">(настроены ГМом в Настройке ГМа, доступны всем)</span></h3>
+      <div class="fm-sheet-mods-cards">
+        ${
+          globalOnly.length
+            ? globalOnly.map((m) => renderGlobalModifierCard(m)).join("")
+            : `<p class="fm-sheet-hint">Общих модификаторов пока нет.</p>`
+        }
+      </div>
+    </div>
   `;
 
   container.querySelector(".fm-sheet-add-modifier").addEventListener("click", async () => {
@@ -330,19 +484,20 @@ function renderModifiersList(container, actor) {
     // вызовет injectPanel() и обновит список, повторный ручной вызов здесь не нужен.
   });
 
-  container.querySelectorAll(".fm-sheet-modifier-name").forEach((el) => {
-    el.addEventListener("click", () => {
-      const itemId = el.dataset.itemId;
+  container.querySelectorAll(".fm-sheet-mod-card[data-item-id]").forEach((card) => {
+    card.addEventListener("click", (ev) => {
+      if (ev.target.closest(".fm-sheet-mod-remove")) return;
+      const itemId = card.dataset.itemId;
       actor.items.get(itemId)?.sheet?.render(true);
     });
   });
 
-  container.querySelectorAll(".fm-sheet-bonus-remove").forEach((btn) => {
+  container.querySelectorAll(".fm-sheet-mod-remove").forEach((btn) => {
     btn.addEventListener("click", async (ev) => {
       ev.stopPropagation();
       const itemId = btn.dataset.itemId;
       await actor.deleteEmbeddedDocuments("Item", [itemId]);
-      renderModifiersList(container, actor);
+      renderModifiersTab(container, actor);
     });
   });
 }

@@ -6,17 +6,43 @@
     </button>
   </div>
 
+  <nav class="fm-sheet-tabs">
+    <button type="button" class="fm-sheet-tab-btn" data-tab="paths">
+      <i class="fa-solid fa-route" aria-hidden="true"></i> Пути Магии
+    </button>
+    <button type="button" class="fm-sheet-tab-btn" data-tab="modifiers">
+      <i class="fa-solid fa-sliders" aria-hidden="true"></i> Модификаторы
+    </button>
+  </nav>
+
   <div class="fm-sheet-body">
-    <section class="fm-sheet-section">
+    <section class="fm-sheet-tab-panel" data-tab-panel="paths">
+      <div class="fm-sheet-profile-row">
+        <div class="fm-sheet-profile-field" data-field="element">
+          <span class="fm-sheet-profile-label">Элемент</span>
+          <span class="fm-sheet-profile-value"></span>
+        </div>
+        <div class="fm-sheet-profile-field" data-field="circle">
+          <span class="fm-sheet-profile-label">Круг</span>
+          <span class="fm-sheet-profile-value"></span>
+        </div>
+        <div class="fm-sheet-profile-field" data-field="type">
+          <span class="fm-sheet-profile-label">Тип</span>
+          <span class="fm-sheet-profile-value"></span>
+        </div>
+        <div class="fm-sheet-profile-field" data-field="limit">
+          <span class="fm-sheet-profile-label">Закл. Лимит</span>
+          <span class="fm-sheet-profile-value"></span>
+        </div>
+      </div>
+
       <h3>Токены Путей</h3>
       <p class="fm-sheet-hint">База — вручную. Бонус — сумма всех предметов с меткой этого Пути (в т.ч. от Skill Tree). Итого — то, что видит окно Круга.</p>
       <div class="fm-sheet-paths-list"></div>
     </section>
 
-    <section class="fm-sheet-section fm-sheet-modifiers-section">
-      <h3>Модификаторы</h3>
-      <p class="fm-sheet-hint">Каждый модификатор — обычный предмет с флагами стоимости (отрицательная даёт Ману, положительная — доп. стоимость) и, опционально, иконки. Включаются/выключаются на конкретную сборку прямо в окне Круга.</p>
-      <div class="fm-sheet-modifiers-list"></div>
+    <section class="fm-sheet-tab-panel" data-tab-panel="modifiers" hidden>
+      <div class="fm-sheet-modifiers-tab-body"></div>
     </section>
   </div>
 </div>

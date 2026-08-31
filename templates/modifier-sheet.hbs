@@ -1,32 +1,60 @@
 <div class="free-magic-modifier-sheet">
   <div class="fm-modsheet-header">
     <img class="fm-modsheet-img" src="{{item.img}}" title="Изменить иконку" alt="" />
-    <input type="text" name="name" value="{{item.name}}" placeholder="Название модификатора" />
+    <div class="fm-modsheet-header-main">
+      <input type="text" name="name" value="{{item.name}}" placeholder="Название модификатора" />
+      <div class="fm-modsheet-stars-row">
+        <span class="fm-modsheet-stars" title="Текущий освоенный уровень">
+          {{#each tiers}}
+          <i class="fm-modsheet-star {{#if (eq this.index ../currentTier)}}fm-modsheet-star-current{{/if}} {{#if (lte this.index ../currentTier)}}fa-solid{{else}}fa-regular{{/if}} fa-star" data-tier="{{this.index}}" title="{{this.label}}"></i>
+          {{/each}}
+        </span>
+        <span class="fm-modsheet-current-label">{{#each tiers}}{{#if (eq this.index ../currentTier)}}{{this.label}}{{/if}}{{/each}}</span>
+        {{#if isGlobal}}<span class="fm-modsheet-global-tag" title="Общий модификатор — доступен всем персонажам">Общий</span>{{/if}}
+      </div>
+    </div>
   </div>
 
   <section class="fm-modsheet-section">
     <h3>Описание</h3>
-    <textarea name="system.description" rows="3" placeholder="Флейвор-текст, антураж...">{{system.description}}</textarea>
+    <textarea name="system.description" rows="2" placeholder="Флейвор-текст, антураж...">{{system.description}}</textarea>
   </section>
 
-  <section class="fm-modsheet-section">
-    <h3>Модификатор (что он делает)</h3>
-    <textarea name="system.effect" rows="3" placeholder="Механический эффект — что конкретно меняет этот модификатор...">{{system.effect}}</textarea>
+  {{#if isGM}}
+  <section class="fm-modsheet-section fm-modsheet-gm-row">
+    <label class="fm-modsheet-checkbox-row">
+      <input type="checkbox" name="system.hideLockedTiers" {{#if hideLockedTiers}}checked{{/if}} />
+      <span>Скрывать неоткрытые уровни от игрока (по умолчанию видно всё)</span>
+    </label>
   </section>
+  {{/if}}
 
-  <section class="fm-modsheet-section fm-modsheet-cost-section">
-    <h3>Стоимость</h3>
-    <div class="fm-modsheet-cost-row">
-      <label>
-        <span>Жетоны (отрицательное = даёт Ману, положительное = доп. стоимость)</span>
-        <input type="number" name="system.tokenCost" step="1" value="{{system.tokenCost}}" />
-      </label>
+  <section class="fm-modsheet-section fm-modsheet-tiers">
+    <h3>Уровни освоения</h3>
+    {{#each tiers}}
+    <div class="fm-modsheet-tier {{#if this.locked}}fm-modsheet-tier-locked{{/if}} {{#if (eq this.index ../currentTier)}}fm-modsheet-tier-active{{/if}}">
+      <div class="fm-modsheet-tier-head">
+        <span class="fm-modsheet-tier-stars">{{{this.starsHtml}}}</span>
+        <span class="fm-modsheet-tier-label">{{this.label}}</span>
+        {{#if (eq this.index ../currentTier)}}<span class="fm-modsheet-tier-current-badge">Текущий</span>{{/if}}
+      </div>
+
+      {{#if this.locked}}
+        <p class="fm-modsheet-locked-hint"><i class="fa-solid fa-lock"></i> Этот уровень ещё не открыт.</p>
+      {{else}}
+        <textarea name="system.tier{{this.index}}.effect" rows="2" placeholder="Эффект на уровне «{{this.label}}»...">{{this.effect}}</textarea>
+        <div class="fm-modsheet-tier-cost-row">
+          <label>
+            <span>Жетоны (отриц. = даёт Ману)</span>
+            <input type="number" name="system.tier{{this.index}}.tokenCost" step="1" value="{{this.tokenCost}}" />
+          </label>
+          <label>
+            <span>Изменение Сложности</span>
+            <input type="number" name="system.tier{{this.index}}.difficultyDelta" step="1" value="{{this.difficultyDelta}}" />
+          </label>
+        </div>
+      {{/if}}
     </div>
-    <div class="fm-modsheet-cost-row">
-      <label>
-        <span>Изменение Сложности (независимо от жетонов, например -5 или +5)</span>
-        <input type="number" name="system.difficultyDelta" step="1" value="{{system.difficultyDelta}}" />
-      </label>
-    </div>
+    {{/each}}
   </section>
 </div>

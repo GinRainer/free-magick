@@ -1,3 +1,4 @@
+import { TIER_LABELS } from "./modifiers.js";
 import { browseForIconFile } from "./icon-utils.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -5,20 +6,19 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 
 /**
  * Лист предмета для Item-типа "Модификатор" (free-magic.modifier, см. modifiers.js).
- * Собран по тому же принципу, что и остальные окна модуля (HandlebarsApplicationMixin +
- * прямые DOM-слушатели на change/click вместо автоматического form-binding ApplicationV2) —
- * так поведение предсказуемо и совпадает со стилем остального кода.
  *
- * РИСК (см. также CHANGELOG-v0.19.md): это первый ЛИСТ ДОКУМЕНТА в модуле — раньше все окна
- * были самостоятельными приложениями, а не листами Item/Actor. Точный жизненный цикл и набор
- * гарантий ItemSheetV2 не был живо проверен в вашей связке Foundry/Daggerheart/Sleek UI.
- * Если после создания Модификатора лист откроется пустым, без полей, или title будет не тем —
- * смотрите в первую очередь сюда и присылайте, что в консоли (F12).
+ * v0.20: три независимых уровня освоения (Базовое/Освоение/Мастерство), каждый со своими
+ * Жетонами/Сложностью/Эффектом. Звёзды в шапке кликабельны — выбирают system.currentTier.
+ * Чекбокс "Скрывать неоткрытые уровни от игрока" виден только ГМу; если включён, уровни выше
+ * currentTier показываются НЕ-ГМ зрителю как запертые (без текста эффекта/чисел стоимости).
+ *
+ * РИСК: это лист ДОКУМЕНТА (ItemSheetV2), собственный API которого не был живо протестирован
+ * в вашей связке Foundry/Daggerheart/Sleek UI — см. подробности в CHANGELOG-v0.19/v0.20.md.
  */
 export class FreeMagicModifierSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   static DEFAULT_OPTIONS = {
     classes: ["free-magic-modifier-sheet"],
-    position: { width: 480, height: 620 },
+    position: { width: 540, height: 720 },
     window: { icon: "fa-solid fa-sliders", resizable: true }
   };
 
@@ -26,16 +26,41 @@ export class FreeMagicModifierSheet extends HandlebarsApplicationMixin(ItemSheet
     body: { template: "modules/free-magic/templates/modifier-sheet.hbs" }
   };
 
-  // Явный алиас на case, если базовый ItemSheetV2 почему-то не предоставляет .item сам —
-  // весь остальной код листа полагается именно на this.item, а не на this.document напрямую.
   get item() {
     return this.document;
   }
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
+    const isGM = game.user.isGM;
+    const system = this.item.system;
+    const currentTier = Math.max(1, Math.min(3, Number(system.currentTier) || 1));
+    const hideLockedTiers = Boolean(system.hideLockedTiers);
+
+    const tiers = [1, 2, 3].map((index) => {
+      const data = system[`tier${index}`] ?? { effect: "", tokenCost: 0, difficultyDelta: 0 };
+      const locked = hideLockedTiers && !isGM && index > currentTier;
+      const starsHtml = Array.from({ length: index }, () => '<i class="fa-solid fa-star"></i>').join("");
+      return {
+        index,
+        label: TIER_LABELS[index - 1],
+        locked,
+        starsHtml,
+        effect: data.effect ?? "",
+        tokenCost: Number(data.tokenCost) || 0,
+        difficultyDelta: Number(data.difficultyDelta) || 0
+      };
+    });
+
     context.item = this.item;
-    context.system = this.item.system;
+    context.system = system;
+    context.isGM = isGM;
+    context.currentTier = currentTier;
+    context.hideLockedTiers = hideLockedTiers;
+    context.tiers = tiers;
+    // Является ли предмет ОБЩИМ (мировым, без актора-владельца) — просто справочная строка
+    // в шапке листа, чтобы не путать с личным при случайном открытии не того предмета.
+    context.isGlobal = !this.item.parent;
     return context;
   }
 
@@ -55,14 +80,30 @@ export class FreeMagicModifierSheet extends HandlebarsApplicationMixin(ItemSheet
     root.querySelector('[name="system.description"]').addEventListener("change", (ev) => {
       this.item.update({ "system.description": ev.currentTarget.value });
     });
-    root.querySelector('[name="system.effect"]').addEventListener("change", (ev) => {
-      this.item.update({ "system.effect": ev.currentTarget.value });
+
+    // Звёзды текущего уровня — кликабельны, выставляют system.currentTier целиком (клик по
+    // 2-й звезде = "Освоение", и т.д.), а не инкремент/декремент по одной.
+    root.querySelectorAll(".fm-modsheet-star").forEach((star) => {
+      star.addEventListener("click", () => {
+        const tier = Number(star.dataset.tier);
+        this.item.update({ "system.currentTier": tier });
+      });
     });
-    root.querySelector('[name="system.tokenCost"]').addEventListener("change", (ev) => {
-      this.item.update({ "system.tokenCost": Math.floor(Number(ev.currentTarget.value)) || 0 });
+
+    root.querySelector('[name="system.hideLockedTiers"]')?.addEventListener("change", (ev) => {
+      this.item.update({ "system.hideLockedTiers": ev.currentTarget.checked });
     });
-    root.querySelector('[name="system.difficultyDelta"]').addEventListener("change", (ev) => {
-      this.item.update({ "system.difficultyDelta": Math.floor(Number(ev.currentTarget.value)) || 0 });
-    });
+
+    for (let i = 1; i <= 3; i++) {
+      root.querySelector(`[name="system.tier${i}.effect"]`)?.addEventListener("change", (ev) => {
+        this.item.update({ [`system.tier${i}.effect`]: ev.currentTarget.value });
+      });
+      root.querySelector(`[name="system.tier${i}.tokenCost"]`)?.addEventListener("change", (ev) => {
+        this.item.update({ [`system.tier${i}.tokenCost`]: Math.floor(Number(ev.currentTarget.value)) || 0 });
+      });
+      root.querySelector(`[name="system.tier${i}.difficultyDelta"]`)?.addEventListener("change", (ev) => {
+        this.item.update({ [`system.tier${i}.difficultyDelta`]: Math.floor(Number(ev.currentTarget.value)) || 0 });
+      });
+    }
   }
 }
