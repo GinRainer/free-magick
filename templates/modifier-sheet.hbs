@@ -15,9 +15,21 @@
     </div>
   </div>
 
+  <section class="fm-modsheet-section fm-modsheet-meta-row">
+    <label class="fm-modsheet-meta-field">
+      <span>Категория <em>(вкладка в панели Круга)</em></span>
+      <input type="text" name="system.category" value="{{category}}" placeholder="Общие" />
+    </label>
+  </section>
+
   <section class="fm-modsheet-section">
     <h3>Описание</h3>
     <textarea name="system.description" rows="2" placeholder="Флейвор-текст, антураж...">{{system.description}}</textarea>
+  </section>
+
+  <section class="fm-modsheet-section">
+    <h3>Требования <em>(необязательно)</em></h3>
+    <textarea name="system.requirement" rows="2" placeholder="Например: доступно только с Путём Осознание III+. Текст справочный — модуль не проверяет условие автоматически.">{{requirement}}</textarea>
   </section>
 
   {{#if isGM}}

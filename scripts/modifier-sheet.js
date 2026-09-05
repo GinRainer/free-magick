@@ -12,13 +12,16 @@ const { ItemSheetV2 } = foundry.applications.sheets;
  * Чекбокс "Скрывать неоткрытые уровни от игрока" виден только ГМу; если включён, уровни выше
  * currentTier показываются НЕ-ГМ зрителю как запертые (без текста эффекта/чисел стоимости).
  *
+ * v0.21: добавлены два top-level поля — Категория (группировка во вкладки в панели Круга) и
+ * Требования (опциональный информационный текст условия применения, не проверяется автоматически).
+ *
  * РИСК: это лист ДОКУМЕНТА (ItemSheetV2), собственный API которого не был живо протестирован
  * в вашей связке Foundry/Daggerheart/Sleek UI — см. подробности в CHANGELOG-v0.19/v0.20.md.
  */
 export class FreeMagicModifierSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   static DEFAULT_OPTIONS = {
     classes: ["free-magic-modifier-sheet"],
-    position: { width: 540, height: 720 },
+    position: { width: 540, height: 760 },
     window: { icon: "fa-solid fa-sliders", resizable: true }
   };
 
@@ -58,6 +61,8 @@ export class FreeMagicModifierSheet extends HandlebarsApplicationMixin(ItemSheet
     context.currentTier = currentTier;
     context.hideLockedTiers = hideLockedTiers;
     context.tiers = tiers;
+    context.category = system.category ?? "";
+    context.requirement = system.requirement ?? "";
     // Является ли предмет ОБЩИМ (мировым, без актора-владельца) — просто справочная строка
     // в шапке листа, чтобы не путать с личным при случайном открытии не того предмета.
     context.isGlobal = !this.item.parent;
@@ -79,6 +84,16 @@ export class FreeMagicModifierSheet extends HandlebarsApplicationMixin(ItemSheet
 
     root.querySelector('[name="system.description"]').addEventListener("change", (ev) => {
       this.item.update({ "system.description": ev.currentTarget.value });
+    });
+
+    // v0.21 — Категория (текст, группирует во вкладки в панели Круга) и Требования
+    // (опциональный информационный текст, не проверяется автоматически).
+    root.querySelector('[name="system.category"]')?.addEventListener("change", (ev) => {
+      const value = ev.currentTarget.value.trim();
+      this.item.update({ "system.category": value || "Общие" });
+    });
+    root.querySelector('[name="system.requirement"]')?.addEventListener("change", (ev) => {
+      this.item.update({ "system.requirement": ev.currentTarget.value });
     });
 
     // Звёзды текущего уровня — кликабельны, выставляют system.currentTier целиком (клик по

@@ -10,8 +10,10 @@ import {
   MODULE_ID,
   getActiveResourceList,
   getBackgroundStatus,
+  getBackgroundIcon,
   setResourceValue,
   getActorElements,
+  getActorAspect,
   getActorRevealsBackground
 } from "./scene-resource.js";
 import { renderIconHtml } from "./icon-utils.js";
@@ -54,13 +56,14 @@ export function registerResourceWidget() {
     if (setting.key?.startsWith(`${MODULE_ID}.resource`)) renderWidget();
   });
 
-  // Если у актора, за которого играет этот пользователь, поменялся привязанный Элемент, ИЛИ
-  // право видеть точный Фон (v0.17, флаг revealsBackground) — то, что этому клиенту разрешено
-  // видеть/трогать в виджете, могло измениться.
+  // Если у актора, за которого играет этот пользователь, поменялся привязанный Элемент, Аспект
+  // (v0.21), ИЛИ право видеть точный Фон (v0.17, флаг revealsBackground) — то, что этому клиенту
+  // разрешено видеть/трогать в виджете, могло измениться.
   Hooks.on("updateActor", (actor, changes) => {
     if (actor.id !== game.user.character?.id) return;
     const relevant =
       foundry.utils.hasProperty(changes, `flags.${MODULE_ID}.elements`) ||
+      foundry.utils.hasProperty(changes, `flags.${MODULE_ID}.aspect`) ||
       foundry.utils.hasProperty(changes, `flags.${MODULE_ID}.revealsBackground`);
     if (relevant) renderWidget();
   });
@@ -144,13 +147,19 @@ function attachDragHandlers(el) {
 
 /**
  * null → видит и может править всё (ГМ). Иначе — набор ключей (Элементы/Аспекты), привязанных
- * к персонажу этого игрока (раздел 11.4) — сверяется с `game.user.character`, тем же способом,
- * которым в разделе 13 ГМ назначает Элемент персонажу.
+ * к персонажу этого игрока (раздел 11.4) — v0.21: сверяется и с Элементом(-ами), и с личным
+ * Аспектом персонажа (если он назначен, см. scene-resource.js, getActorAspect). Если Аспекта
+ * нет — он просто не попадает в набор, специально показывать/скрывать по этому поводу ничего
+ * не нужно, отсутствие ключа само по себе ничего не рендерит.
  */
 function viewerElementKeys() {
   if (game.user.isGM) return null;
   const actor = game.user.character;
-  return new Set(actor ? getActorElements(actor) : []);
+  if (!actor) return new Set();
+  const keys = new Set(getActorElements(actor));
+  const aspect = getActorAspect(actor);
+  if (aspect) keys.add(aspect);
+  return keys;
 }
 
 /**
@@ -188,10 +197,11 @@ export function renderWidget() {
     : status.stateLabel;
 
   const elementsHtml = elements.map((el) => renderElementBlock(el, viewerKeys, isGM)).join("");
+  const backgroundIconHtml = renderIconHtml(getBackgroundIcon(), { className: "fmrw-background-icon" });
 
   widgetEl.innerHTML = `
     <div class="fmrw-row fmrw-background fmrw-state-${status.stateKey}">
-      <i class="fa-solid fa-hurricane"></i>
+      ${backgroundIconHtml}
       <span>${bgText}</span>
     </div>
     <div class="fmrw-elements">

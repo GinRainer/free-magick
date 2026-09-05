@@ -37,9 +37,6 @@
   border: none;
 }
 
-/* --- Левая колонка: сворачиваемые виджеты «Мои Токены Маны» / «Получить Токены Маны» --- */
-/* Заметная тонкая полоса прокрутки — применяется ко всем прокручиваемым областям модуля,
-   чтобы было явно видно, что это скроллящаяся зона, а не обрезанный контент. */
 .fm-col-left, .fm-col-side, .fm-widget-body, .fm-circle-stage {
   scrollbar-width: thin;
   scrollbar-color: var(--fm-border) transparent;
@@ -59,7 +56,7 @@
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
-  min-height: 0; /* без этого grid-строка растягивается по контенту и вылезает за окно */
+  min-height: 0;
   min-width: 0;
 }
 
@@ -115,7 +112,6 @@
 .fm-path-row:hover { background: var(--fm-panel-hover); }
 .fm-path-active { border-color: var(--fm-path-color, var(--fm-accent)); background: var(--fm-panel-hover); }
 
-/* Визуальный разделитель перед обобщёнными источниками (Токены Маны / Дикие Токены) */
 .fm-path-row.fm-source-generic {
   margin-top: 6px;
   padding-top: 9px;
@@ -159,7 +155,6 @@
   border-radius: 3px;
 }
 
-/* --- Колонка Круга --- */
 .fm-col-circle {
   display: flex;
   flex-direction: column;
@@ -188,8 +183,6 @@
 }
 .fm-fullscreen-toggle:hover { background: var(--fm-panel-hover); }
 
-/* Подстраховка на случай, если setPosition() чем-то ограничен другим CSS Foundry —
-   эти правила побеждают даже инлайн-стили благодаря !important. */
 #free-magic-circle.fm-fullscreen {
   top: 0 !important;
   left: 0 !important;
@@ -199,9 +192,6 @@
   max-height: 100vh !important;
 }
 
-/* Круг теперь один в колонке (Докупка переехала налево) — растягивается на всё доступное
-   пространство, в том числе в полноэкранном режиме. Скролл — просто подстраховка на случай
-   нехватки высоты у самого окна. */
 .fm-circle-stage {
   width: 100%;
   flex: 1 1 auto;
@@ -214,7 +204,6 @@
 
 .fm-svg { width: 100%; height: auto; display: block; overflow: visible; }
 
-/* Нейтральный тир 0 — штриховка, чтобы визуально отличался от пустых (доступных) колец */
 .fm-hub { fill: url(#fm-neutral-hatch); stroke: var(--fm-border); stroke-width: 1; cursor: pointer; }
 .fm-hatch-bg { fill: var(--fm-panel); }
 .fm-hatch-line { stroke: var(--fm-text-secondary); stroke-width: 1; }
@@ -238,7 +227,6 @@
 
 .fm-label { font-size: 10px; fill: var(--fm-text); }
 
-/* --- Виджет «Получить Токены Маны» --- */
 .fm-purchase-view { width: 100%; }
 .fm-purchase-intro { font-size: 11px; color: var(--fm-text-secondary); margin: 0 0 10px; }
 
@@ -309,7 +297,6 @@
 .fm-bank-draw:disabled:hover { background: var(--fm-bg); }
 .fm-bank-hint { font-size: 11px; color: var(--fm-text-secondary); margin: 6px 0 0; }
 
-/* --- Правая колонка --- */
 .fm-col-side {
   display: flex;
   flex-direction: column;
@@ -326,42 +313,192 @@
   padding: 10px;
 }
 
-.fm-mod-row {
+/* --- v0.21: Карточная панель Модификаторов в Круге (вкладки-категории + карточки + пагинация) ---
+   Модификаторы — предметы (см. modifiers.js), их может быть сколько угодно — библиотека,
+   которую ГМ наполняет и раздаёт персонажам. Вкладки группируют по полю category предмета,
+   внутри категории — постраничный грид карточек (см. circle-app.js, MODS_PER_PAGE). */
+
+.fm-mods-tabs {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 6px;
-  margin-bottom: 3px;
-  border-bottom: 1px solid var(--fm-border);
-  border-left: 3px solid transparent;
-  cursor: pointer;
-  color: var(--fm-text);
-  border-radius: 3px;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
 }
-.fm-mod-row:last-child { border-bottom: none; }
-.fm-mod-row:hover { background: var(--fm-panel-hover); }
-/* v0.20 — рамка слева меняет цвет по текущему уровню освоения модификатора, чтобы уровень
-   был "сразу заметен" в самом Круге, не только по звёздочкам */
-.fm-mod-row-tier-1 { border-left-color: var(--fm-border); }
-.fm-mod-row-tier-2 { border-left-color: var(--fm-accent); }
-.fm-mod-row-tier-3 { border-left-color: var(--fm-gold); }
+.fm-mods-tab {
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text-secondary);
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.fm-mods-tab:hover { color: var(--fm-text); background: var(--fm-panel-hover); }
+.fm-mods-tab-active {
+  color: var(--fm-bg) !important;
+  background: var(--fm-accent) !important;
+  border-color: var(--fm-accent) !important;
+  font-weight: 600;
+}
+
+.fm-mods-empty { font-size: 11px; color: var(--fm-text-secondary); margin: 0 0 8px; }
+
+.fm-mods-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* v0.24 — карточка теперь минимальная: только иконка + три звезды дугой над ней. Всё остальное
+   (название, бейджи, категория, требования, метка Общий/Личный) — во всплывающем предпросмотре
+   при наведении, см. .fm-mod-tooltip ниже. */
+.fm-mod-card {
+  position: relative;
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 16px;
+  cursor: pointer;
+}
+.fm-mod-card-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-border);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.fm-mod-card:hover .fm-mod-card-icon-wrap { border-color: var(--fm-accent); }
+.fm-mod-card-active .fm-mod-card-icon-wrap {
+  border-color: var(--fm-accent);
+  background: rgba(var(--fm-accent-rgb), 0.18);
+  box-shadow: 0 0 0 1px var(--fm-accent) inset;
+}
+.fm-mod-card-overridden .fm-mod-card-icon-wrap { border-style: dashed; }
+.fm-mod-card input[type="checkbox"] { display: none; }
+
+/* Звёзды освоения (renderTierStars) выложены дугой ПОЛУКРУГОМ над иконкой: средняя звезда
+   приподнята относительно боковых — простой приём без тригонометрии/SVG. Для Общих
+   модификаторов кликабельны (пишут переопределение уровня для этого персонажа). */
+.fm-mod-card-stars.fm-tier-stars {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 15px;
+}
+.fm-mod-card-stars.fm-tier-stars i {
+  font-size: 10px;
+  color: var(--fm-border);
+}
+.fm-mod-card-stars.fm-tier-stars i.fa-solid {
+  color: var(--fm-gold);
+}
+.fm-mod-card-stars.fm-tier-stars i:nth-child(2) {
+  margin-bottom: 3px;
+}
+.fm-mod-card-stars-editable i {
+  cursor: pointer;
+  padding: 2px;
+  margin: -2px;
+}
+.fm-mod-card-stars-editable i:hover {
+  color: var(--fm-accent);
+  transform: scale(1.2);
+}
+
+.fm-mod-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--fm-panel);
+}
+
+/* --- Всплывающий предпросмотр карточки Модификатора (v0.24) — один переиспользуемый элемент,
+   позиционируется JS-ом (position: fixed) прямо над/под наведённой карточкой. --- */
+.fm-mod-tooltip {
+  position: fixed;
+  z-index: 100;
+  width: 220px;
+  background: var(--fm-panel, #221f2e);
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color: var(--fm-text, #ece7f5);
+  font-size: 12px;
+  pointer-events: none;
+}
+.fm-mod-tooltip-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.fm-mod-tooltip-header img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--fm-bg, #17141f); flex: 0 0 auto; }
+.fm-mod-tooltip-title { display: flex; flex-direction: column; gap: 2px; }
+.fm-mod-tooltip-title strong { font-size: 13px; }
+.fm-mod-tooltip-stars { font-size: 10px; }
+.fm-mod-tooltip-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+.fm-mod-tooltip-requirement {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px dashed var(--fm-border, #423c58);
+  font-size: 11px;
+  font-style: italic;
+  color: var(--fm-text-secondary, #a196b8);
+}
+.fm-mod-tooltip-requirement i { color: var(--fm-danger, #e5536b); margin-right: 3px; }
+.fm-mod-tooltip-hint { margin: 6px 0 0; font-size: 10px; color: var(--fm-text-secondary, #a196b8); }
 
 .fm-mod-badge {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
   background: var(--fm-bg);
   color: var(--fm-text);
   white-space: nowrap;
 }
+.fm-mod-badge-difficulty { color: var(--fm-gold); }
+.fm-mod-badge-category { color: var(--fm-text-secondary); }
+
+.fm-mod-source {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.fm-mod-source-global { background: var(--fm-panel); color: var(--fm-text-secondary); }
+.fm-mod-source-personal { background: rgba(var(--fm-accent-rgb), 0.18); color: var(--fm-accent); }
+
+.fm-mods-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.fm-mods-pager button {
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-border);
+  color: var(--fm-text);
+  border-radius: 4px;
+  width: 26px;
+  height: 24px;
+  cursor: pointer;
+}
+.fm-mods-pager button:hover:not(:disabled) { background: var(--fm-panel-hover); }
+.fm-mods-pager button:disabled { opacity: 0.35; cursor: not-allowed; }
+.fm-mods-page-label { font-size: 11px; color: var(--fm-text-secondary); }
 
 .fm-mods-hint { font-size: 11px; color: var(--fm-text-secondary); margin: 0; }
-.fm-mod-icon { width: 16px; height: 16px; object-fit: contain; vertical-align: middle; border-radius: 2px; }
-.fm-mod-badges { display: flex; gap: 4px; align-items: center; }
-.fm-mod-badge-difficulty { color: var(--fm-gold); }
-.fm-mod-label-wrap { display: flex; flex-direction: column; gap: 1px; line-height: 1.3; }
-.fm-mod-name { display: flex; align-items: center; gap: 5px; }
-.fm-mod-stars { font-size: 9px; }
 
 .fm-gm-row { display: flex; gap: 8px; }
 .fm-gm-value, .fm-gm-note, .fm-intent-text {
@@ -607,15 +744,7 @@
   text-align: center;
 }
 
-
-
-/* --- Панель на листе персонажа (стиль Paper Doll) ---
-   Внедряется как прямой потомок корня листа персонажа. Важно: панель позиционируется
-   ВНУТРИ границ листа (left:0..width, а не за его пределами через отрицательный translateX) —
-   первая версия выносила и кнопку, и панель за левый край листа, а окна Foundry часто
-   обрезают всё, что выходит за собственные границы (overflow:hidden), из-за чего было не видно.
-   Кнопка-переключатель теперь в шапке листа (см. sheet-panel.js) — то же самое надёжное место,
-   где уже работает кнопка открытия Круга. */
+/* --- Панель на листе персонажа (стиль Paper Doll) --- */
 
 .free-magic-sheet-toggle-btn { margin-left: 8px; font-size: 12px; cursor: pointer; }
 .free-magic-sheet-toggle-btn.fm-active { color: #9166ea; }
@@ -624,8 +753,8 @@
   position: absolute;
   left: 0;
   top: 0;
-  transform: translateX(-100%); /* всегда "снаружи", сразу слева от листа — см. sheet-panel.js про overflow:visible */
-  width: 420px; /* v0.20: расширено с 300px — раздел «Модификаторы» стал заметно объёмнее */
+  transform: translateX(-100%);
+  width: 420px;
   height: 100%;
   z-index: 20;
   visibility: hidden;
@@ -686,7 +815,6 @@
 }
 .fm-sheet-close:hover { background: var(--fm-panel-hover); }
 
-/* v0.20 — вкладки «Пути Магии» / «Модификаторы» */
 .fm-sheet-tabs {
   display: flex;
   gap: 4px;
@@ -716,7 +844,6 @@
 
 .fm-sheet-body { flex: 1 1 auto; overflow-y: auto; padding: 12px; }
 
-/* v0.20 — строка профиля наверху вкладки «Пути Магии»: Элемент / Круг / Тип / Закл. Лимит */
 .fm-sheet-profile-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -751,7 +878,6 @@
   font-size: 12px;
 }
 
-/* v0.20 — карточки модификаторов на вкладке «Модификаторы» панели листа */
 .fm-sheet-mods-section { margin-bottom: 16px; }
 .fm-sheet-mods-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .fm-sheet-mods-section-head h3 { margin: 0; }
@@ -802,7 +928,6 @@
 }
 .fm-sheet-mod-remove:hover { color: #fff; }
 
-/* Тег "Общий" — переиспользуется в Круге/GM Viewer/GM Settings тоже (см. ниже общее правило) */
 .fm-mod-global-tag {
   font-size: 9px;
   text-transform: uppercase;
@@ -813,7 +938,6 @@
   padding: 1px 5px;
 }
 
-/* Звёзды уровня освоения — переиспользуются везде, где показывается модификатор */
 .fm-tier-stars { font-size: 10px; color: var(--fm-gold); white-space: nowrap; }
 .fm-tier-stars .fa-regular { color: var(--fm-text-secondary); opacity: 0.5; }
 
@@ -911,8 +1035,7 @@
 }
 .fm-sheet-bonus-remove:hover { color: #fff; }
 
-/* --- Постоянный виджет ГМа со списком открытых сборок заклинаний (document.body, не привязан
-   ни к одному конкретному листу/окну — виден поверх всего интерфейса, пока ГМ) --- */
+/* --- Постоянный виджет ГМа со списком открытых сборок заклинаний --- */
 #free-magic-gm-watch {
   position: fixed;
   right: 16px;
@@ -1066,7 +1189,7 @@
 .fm-gmv-intent { color: var(--fm-text-secondary); font-style: italic; margin: 0; }
 .fm-gmv-hint { color: var(--fm-text-secondary); font-size: 11px; margin: 0; }
 
-/* --- v0.15: Окно настройки ГМа v2 (Каталог / Эта сцена / Игроки) ------------------------- */
+/* --- v0.15: Окно настройки ГМа v2 (Каталог / Эта сцена / Игроки / Модификаторы) ----------- */
 
 #free-magic-resource-config { color: var(--fm-text); }
 
@@ -1180,10 +1303,10 @@
 .fmrc-active-row input[type="number"] { width: 56px; }
 .fmrc-active-aspect-row { margin-left: 22px; color: var(--fm-text-secondary); }
 
-/* v0.17: добавлена 5-я колонка «Видит Фон» — grid-template-columns расширен с 4 до 5 значений */
+/* v0.21: добавлена колонка «Аспект» — grid-template-columns расширен с 5 до 6 значений */
 .fmrc-players-header, .fmrc-player-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 0.6fr;
+  grid-template-columns: 1.1fr 0.9fr 0.9fr 0.8fr 0.8fr 0.6fr;
   gap: 8px;
   align-items: center;
   padding: 4px 0;
@@ -1192,6 +1315,28 @@
 .fmrc-player-row { border-bottom: 1px solid var(--fm-border); }
 .fmrc-player-row:last-child { border-bottom: none; }
 .fmrc-player-reveals-bg { justify-self: center; width: 16px; height: 16px; }
+.fmrc-player-aspect:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* v0.22 — зона перетаскивания предмета-Модификатора в библиотеку Общих модификаторов */
+.fmrc-modifier-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px dashed var(--fm-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--fm-text-secondary);
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.fmrc-modifier-dropzone i { font-size: 16px; color: var(--fm-text-secondary); flex: 0 0 auto; }
+.fmrc-modifier-dropzone.fmrc-dropzone-active {
+  border-color: var(--fm-accent);
+  background: rgba(var(--fm-accent-rgb), 0.12);
+  color: var(--fm-text);
+}
+.fmrc-modifier-dropzone.fmrc-dropzone-active i { color: var(--fm-accent); }
 
 /* v0.20 — вкладка «Модификаторы» (ОБЩИЕ, мировые Items) */
 .fmrc-modifiers-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
@@ -1208,6 +1353,14 @@
 .fmrc-modifier-row:hover { background: var(--fm-panel-hover); }
 .fmrc-modifier-icon { width: 26px; height: 26px; border-radius: 4px; object-fit: cover; flex: 0 0 auto; background: var(--fm-bg); }
 .fmrc-modifier-name { flex: 1; font-size: 13px; color: var(--fm-text); }
+.fmrc-modifier-category {
+  font-size: 10px;
+  color: var(--fm-text-secondary);
+  background: var(--fm-bg);
+  border-radius: 3px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
 .fmrc-modifier-stars { font-size: 10px; }
 .fmrc-modifier-badges { font-size: 11px; color: var(--fm-text-secondary); white-space: nowrap; }
 .fmrc-modifier-remove {
@@ -1218,7 +1371,6 @@
   padding: 4px;
 }
 .fmrc-modifier-remove:hover { color: #fff; }
-
 
 /* --- v0.16: Базовое отображение Ресурса Сцены (виден всем клиентам) --------------------- */
 
@@ -1247,9 +1399,6 @@
   user-select: none;
 }
 
-/* Позиция по умолчанию, пока виджет ни разу не перетаскивали — верх по центру экрана.
-   Как только появляются явные left/top в inline-style (после первого drag), этот класс
-   снимается и центрирование больше не пересчитывается (см. resource-widget.js). */
 .fmrw-default-position {
   top: 10px;
   left: 50%;
@@ -1292,10 +1441,7 @@
 .fmrw-btn:hover { background: var(--fm-accent); color: var(--fm-bg); }
 .fmrw-empty-hint { color: var(--fm-text-secondary); font-size: 11px; margin: 4px 0 0; }
 
-/* --- v0.18: Иконки-файлы из мира Foundry (наравне с классами FontAwesome) -----------------
-   Общее правило без привязки к CSS-переменным конкретного окна — используется во всех
-   контекстах модуля (виджет Ресурса, панель листа, окно Круга, окно наблюдения ГМа,
-   Каталог в GM Settings), см. icon-utils.js (renderIconHtml). */
+/* --- v0.18: Иконки-файлы из мира Foundry (наравне с классами FontAwesome) --- */
 .fm-icon-img {
   width: 14px;
   height: 14px;
@@ -1308,7 +1454,6 @@
 .fm-sheet-modifier-name { cursor: pointer; display: inline-flex; align-items: center; }
 .fm-sheet-modifier-name:hover { color: var(--fm-accent); }
 
-/* Кнопка "Обзор..." и превью иконки в Каталоге Элементов/Аспектов (resource-config-app.js) */
 .fmrc-icon-browse {
   background: var(--fm-panel);
   border: 1px solid var(--fm-border);
@@ -1389,6 +1534,20 @@
   padding: 1px 6px;
 }
 
+/* v0.21 — строка полей Категория/Требования (top-level, не per-tier) */
+.fm-modsheet-meta-row { display: flex; flex-direction: column; gap: 8px; }
+.fm-modsheet-meta-field { display: flex; flex-direction: column; gap: 4px; }
+.fm-modsheet-meta-field span { font-size: 11px; color: var(--fm-text-secondary); }
+.fm-modsheet-meta-field span em { font-style: italic; opacity: 0.8; }
+.fm-modsheet-meta-field input {
+  background: var(--fm-panel);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
 .fm-modsheet-section { margin-bottom: 14px; }
 .fm-modsheet-section h3 {
   margin: 0 0 6px;
@@ -1397,6 +1556,7 @@
   letter-spacing: 0.04em;
   color: var(--fm-text-secondary);
 }
+.fm-modsheet-section h3 em { text-transform: none; letter-spacing: normal; font-style: italic; font-weight: 400; }
 .fm-modsheet-section textarea {
   width: 100%;
   background: var(--fm-panel);
@@ -1447,3 +1607,125 @@
   border-radius: 4px;
   padding: 4px 8px;
 }
+
+/* --- v0.23/v0.24: Реакция ГМа — красные акценты везде, где она отображается у игрока -------- */
+
+.fm-difficulty-reactions-row {
+  padding: 6px 0 0;
+  margin-top: 4px;
+  border-top: 1px dashed var(--fm-danger);
+  font-size: 11px;
+}
+.fm-difficulty-reactions-row span { color: var(--fm-danger); font-weight: 600; }
+.fm-difficulty-reactions-list { list-style: none; margin: 4px 0 0; padding: 0; color: var(--fm-danger); }
+.fm-difficulty-reactions-list li { padding: 1px 0; }
+
+.fm-reaction-sum-row span:first-child { color: var(--fm-danger); }
+.fm-reaction-sum { color: var(--fm-danger); font-weight: 600; }
+
+.fm-preview-reactions { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.fm-preview-reaction-item {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  background: rgba(var(--fm-danger-rgb), 0.12);
+  border: 1px solid var(--fm-danger);
+  border-radius: 4px;
+  color: var(--fm-danger);
+  font-weight: 600;
+}
+
+/* Строка про Нестабильность (v0.23) — предупреждающий, не обязательно красный тон */
+.fm-preview-instability {
+  border-left-color: var(--fm-gold) !important;
+  color: var(--fm-gold) !important;
+  font-style: italic;
+}
+
+/* GM Settings → вкладка «Реакция ГМа»: тот же dropzone, что и у Общих модификаторов, но с
+   красноватым акцентом рамки, чтобы визуально отличаться как "опасная"/GM-only зона. */
+.fmrc-reaction-dropzone {
+  border-color: rgba(var(--fm-danger-rgb), 0.5);
+}
+.fmrc-reaction-dropzone.fmrc-dropzone-active {
+  border-color: var(--fm-danger);
+  background: rgba(var(--fm-danger-rgb), 0.12);
+  color: var(--fm-text);
+}
+.fmrc-reaction-dropzone.fmrc-dropzone-active i { color: var(--fm-danger); }
+.fmrc-reaction-row { border-left: 3px solid var(--fm-danger); }
+
+/* Окно наблюдения ГМа — секция «Реакция ГМа», красный акцент отличает её от обычных Модификаторов */
+.fm-gmv-section-reactions h3 { color: var(--fm-danger); }
+.fm-gmv-section-reactions h3 i { margin-right: 4px; }
+.fm-gmv-reaction-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  border-left: 3px solid var(--fm-danger);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.fm-gmv-reaction-row:hover { background: rgba(var(--fm-danger-rgb), 0.12); }
+
+/* --- v0.23: Кнопка Магического Круга — слева снизу от самого SVG-Круга. Иконка (настраиваемая
+   ГМом, см. scene-resource.js/resource-config-app.js) "истощается" по мере приближения к
+   Заклинательному Лимиту: --fm-instability-remaining (0..100, задаётся JS-ом) управляет и
+   заливкой конического индикатора, и прозрачностью самой иконки. --- */
+.fm-circle-stage { position: relative; }
+.fm-circle-instability-btn {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--fm-border);
+  background: var(--fm-panel);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 2;
+  --fm-instability-remaining: 100;
+}
+.fm-circle-instability-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(var(--fm-accent) calc(var(--fm-instability-remaining) * 1%), transparent 0);
+  opacity: 0.3;
+  pointer-events: none;
+}
+.fm-circle-instability-btn:hover { border-color: var(--fm-accent); }
+.fm-circle-instability-btn .fm-circle-instability-icon,
+.fm-circle-instability-btn .fm-icon-img {
+  position: relative;
+  z-index: 1;
+  font-size: 16px;
+  color: var(--fm-text);
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.fm-circle-instability-btn.fm-depleted {
+  cursor: not-allowed;
+  border-color: var(--fm-border);
+}
+.fm-circle-instability-btn.fm-depleted::before { opacity: 0.08; }
+.fm-circle-instability-btn.fm-depleted .fm-circle-instability-icon,
+.fm-circle-instability-btn.fm-depleted .fm-icon-img {
+  color: var(--fm-text-secondary);
+  opacity: 0.5;
+}
+
+/* Иконка Магического Фона в GM Settings → «Эта сцена» */
+.fmrc-bg-icon-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.fmrc-bg-icon-row label { font-size: 12px; color: var(--fm-text-secondary); flex: 0 0 auto; }
+.fmrc-bg-icon-row input { flex: 1; }
+
+/* Виджет Ресурса Сцены — иконка Фона теперь настраиваемая (img или i, см. renderIconHtml) */
+.fmrw-background-icon { width: 14px; height: 14px; object-fit: contain; }

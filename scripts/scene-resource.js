@@ -68,6 +68,19 @@ export function registerSceneResourceSettings() {
     type: Number,
     default: 0
   });
+
+  // v0.23 — Иконка Магического Фона, настраиваемая ГМом (см. resource-config-app.js, вкладка
+  // «Эта сцена»). Класс FontAwesome ИЛИ путь к файлу-изображению из мира (та же эвристика, что
+  // и везде в модуле — см. icon-utils.js, renderIconHtml/isFileIcon). Используется везде, где
+  // визуально представлен Магический Фон: виджет Ресурса Сцены (resource-widget.js) и кнопка
+  // «Нестабильность» рядом с Кругом (circle-app.js) — единый узнаваемый образ вместо разрозненных
+  // хардкоженных иконок в каждом месте.
+  game.settings.register(MODULE_ID, "resourceBackgroundIcon", {
+    scope: "world",
+    config: false,
+    type: String,
+    default: "fa-solid fa-hurricane"
+  });
 }
 
 export function getCatalog() {
@@ -235,6 +248,17 @@ export function getBackgroundStatus(sceneId = null) {
   return { value, max, instability, stateKey, stateLabel: BACKGROUND_STATE_LABELS[stateKey] };
 }
 
+/** Иконка Магического Фона — настраивается ГМом, общая на весь мир (не по Сцене). */
+export function getBackgroundIcon() {
+  return game.settings.get(MODULE_ID, "resourceBackgroundIcon") || "fa-solid fa-hurricane";
+}
+
+export async function setBackgroundIcon(icon) {
+  const clean = (icon || "").trim() || "fa-solid fa-hurricane";
+  await game.settings.set(MODULE_ID, "resourceBackgroundIcon", clean);
+  return clean;
+}
+
 // --- Активные Элементы/Аспекты этой Сцены ---------------------------------------------------
 
 /** Включает/выключает Элемент или Аспект на текущей Сцене (чекбокс в GM Settings, вкладка «Эта сцена»). */
@@ -275,11 +299,18 @@ export async function setResourceMax(key, newMax, sceneId = null) {
   return { value, max };
 }
 
-// --- Привязка Элемента к персонажу (флаг актора, раздел 11.4 / 13) -------------------------
+// --- Привязка Элемента/Аспекта к персонажу (флаги актора, раздел 11.4 / 13) -----------------
 //
-// Массив, а не одно значение — задел на то, что персонаж однажды сможет быть привязан и к
-// Аспекту в дополнение к родительскому Элементу (см. раздел 11.4). Пока вкладка «Игроки»
-// (раздел 13) редактирует только первый элемент массива через простой выпадающий список.
+// Элемент — массив, а не одно значение — задел на то, что персонаж однажды сможет быть привязан
+// сразу к нескольким (см. раздел 11.4). Вкладка «Игроки» редактирует только первый элемент
+// массива через простой выпадающий список.
+//
+// v0.21 — Аспект: ОТДЕЛЬНЫЙ флаг, не вложенный в массив Элементов. У Аспекта есть смысл только
+// "внутри" уже выбранного Элемента (условно "Элемент: Жизнь, Аспект: Плоть"), и он опционален —
+// далеко не у каждого персонажа он вообще будет назначен. Одиночное значение (или null) вместо
+// массива — то же решение, что уже принято для Элемента, но без задела на множественность,
+// поскольку такой сценарий для Аспекта пока не обсуждался. Отсутствие Аспекта — нормальное,
+// ожидаемое состояние: нигде в интерфейсе он не должен принудительно показываться как "—".
 
 export function getActorElements(actor) {
   return actor?.getFlag(MODULE_ID, "elements") ?? [];
@@ -289,6 +320,21 @@ export async function setActorElements(actor, elementIds) {
   const clean = (Array.isArray(elementIds) ? elementIds : [elementIds]).filter(Boolean);
   await actor.setFlag(MODULE_ID, "elements", clean);
   return clean;
+}
+
+/** Аспект персонажа — null, если не назначен (нормальное состояние, ничего не отображаем). */
+export function getActorAspect(actor) {
+  return actor?.getFlag(MODULE_ID, "aspect") ?? null;
+}
+
+export async function setActorAspect(actor, aspectId) {
+  if (!actor) return null;
+  if (!aspectId) {
+    await actor.unsetFlag(MODULE_ID, "aspect");
+    return null;
+  }
+  await actor.setFlag(MODULE_ID, "aspect", aspectId);
+  return aspectId;
 }
 
 export function getActiveResourceList(sceneId = null) {

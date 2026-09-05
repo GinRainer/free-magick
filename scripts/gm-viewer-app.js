@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./bank.js";
-import { getEffectiveModifiers, renderTierStars } from "./modifiers.js";
+import { getEffectiveModifiers, getGmReactionModifiers, renderTierStars } from "./modifiers.js";
 import { PATHS, getManualPathPools, setManualPathPool, getItemBonusByPath, getPriceMax, setPriceMax, PRICE_MAX_CEILING } from "./paths.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -74,6 +74,7 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
     await this._renderTokens(root);
     this._renderSectors(root);
     this._renderModifiers(root);
+    this._renderReactions(root);
     root.querySelector(".fm-gmv-intent").textContent = this.state?.intent?.trim() || "—";
   }
 
@@ -160,7 +161,8 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
 
   // --- Модификаторы (v0.20 — личные + общие, 3 уровня освоения, см. modifiers.js) — можно
   // включать/выключать удалённо, применяется на клиенте игрока через сокет-сообщение
-  // "gmSetModifier" (см. circle-app.js, _applyRemoteModifierChange). ---
+  // "gmSetModifier" (см. circle-app.js, _applyRemoteModifierChange). v0.21: подсказка строки
+  // теперь показывает и Требования модификатора (если заданы), информационно для ГМа. ---
 
   _renderModifiers(root) {
     const list = root.querySelector(".fm-gmv-mods-list");
@@ -177,8 +179,9 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
       const tokenBadge = m.tokenCost > 0 ? `-${m.tokenCost}` : m.tokenCost < 0 ? `+${Math.abs(m.tokenCost)}` : "";
       const difficultyBadge = m.difficultyDelta !== 0 ? `${m.difficultyDelta > 0 ? "+" : ""}${m.difficultyDelta} Слож.` : "";
       const globalTag = m.isGlobal ? `<span class="fm-gmv-mod-global-tag">Общий</span>` : "";
+      const titleAttr = m.requirement ? ` title="Требования: ${m.requirement}"` : "";
       return `
-        <label class="fm-gmv-mod-row fm-gmv-mod-row-tier-${m.currentTier}">
+        <label class="fm-gmv-mod-row fm-gmv-mod-row-tier-${m.currentTier}"${titleAttr}>
           <span>
             <input type="checkbox" data-mod-key="${m.key}" ${checked ? "checked" : ""} />
             <img class="fm-gmv-mod-icon" src="${m.icon}" alt="" />
@@ -202,6 +205,60 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
         if (this.state) this.state.modsOn = { ...(this.state.modsOn ?? {}), [modKey]: value };
         game.socket.emit(`module.${MODULE_ID}`, {
           action: "gmSetModifier",
+          actorId: this.actorId,
+          modKey,
+          value
+        });
+      });
+    });
+  }
+
+  // --- v0.23: Реакция ГМа — применение негативных модификаторов из отдельной библиотеки
+  // (см. modifiers.js, getGmReactionModifiers / resource-config-app.js, вкладка «Реакция ГМа»)
+  // к КОНКРЕТНОЙ активной сборке этого актора. В отличие от обычных Модификаторов (которые
+  // игрок включает сам), эти чекбоксы редактирует ТОЛЬКО ГМ — применяется через отдельное
+  // сокет-действие "gmSetReaction", у игрока в Круге появляется КРАСНЫМ в Примерной Сложности
+  // и в Предпросмотре Чар (см. circle-app.js, _applyRemoteReactionChange). ---
+
+  _renderReactions(root) {
+    const list = root.querySelector(".fm-gmv-reactions-list");
+    if (!list) return; // старый шаблон gm-viewer.hbs без секции — не ломаемся
+
+    const reactionsOn = this.state?.gmReactionsOn ?? {};
+    const reactions = getGmReactionModifiers();
+
+    if (reactions.length === 0) {
+      list.innerHTML = `<p class="fm-gmv-hint">Библиотека Реакции ГМа пуста — добавьте предметы в GM Settings → «Реакция ГМа».</p>`;
+      return;
+    }
+
+    list.innerHTML = reactions.map((m) => {
+      const checked = Boolean(reactionsOn[m.key]);
+      const tokenBadge = m.tokenCost > 0 ? `-${m.tokenCost}` : m.tokenCost < 0 ? `+${Math.abs(m.tokenCost)}` : "";
+      const difficultyBadge = m.difficultyDelta !== 0 ? `${m.difficultyDelta > 0 ? "+" : ""}${m.difficultyDelta} Слож.` : "";
+      const titleAttr = m.requirement ? ` title="Требования: ${m.requirement}"` : "";
+      return `
+        <label class="fm-gmv-reaction-row"${titleAttr}>
+          <span>
+            <input type="checkbox" data-reaction-key="${m.key}" ${checked ? "checked" : ""} />
+            <img class="fm-gmv-mod-icon" src="${m.icon}" alt="" />
+            ${m.label}
+          </span>
+          <span class="fm-gmv-mod-badges">
+            ${tokenBadge ? `<span class="fm-gmv-mod-badge">${tokenBadge}</span>` : ""}
+            ${difficultyBadge ? `<span class="fm-gmv-mod-badge fm-gmv-mod-badge-difficulty">${difficultyBadge}</span>` : ""}
+          </span>
+        </label>
+      `;
+    }).join("");
+
+    list.querySelectorAll("input[type=checkbox]").forEach((input) => {
+      input.addEventListener("change", (ev) => {
+        const modKey = ev.currentTarget.dataset.reactionKey;
+        const value = ev.currentTarget.checked;
+        if (this.state) this.state.gmReactionsOn = { ...(this.state.gmReactionsOn ?? {}), [modKey]: value };
+        game.socket.emit(`module.${MODULE_ID}`, {
+          action: "gmSetReaction",
           actorId: this.actorId,
           modKey,
           value

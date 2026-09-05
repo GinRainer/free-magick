@@ -12,7 +12,10 @@
       </div>
     </section>
 
-    <section class="fm-widget fm-purchase-widget">
+    <!-- v0.21: временно скрыт по просьбе (виджет нужно переработать) — разметка и логика
+         сохранены, _renderPurchaseView() продолжает сюда рендерить, чтобы Банк/Докупка не
+         потеряли состояние и виджет можно было вернуть обратно одной правкой. -->
+    <section class="fm-widget fm-purchase-widget" hidden>
       <button type="button" class="fm-widget-toggle" data-widget="purchase">
         <i class="fa-solid fa-chevron-right fm-widget-chevron" aria-hidden="true"></i>
         <span>Получить Токены Маны</span>
@@ -36,6 +39,8 @@
             <p>Ваше заклинание накладывает следующий Эффект:</p>
             <textarea class="fm-intent-text" rows="3" placeholder="Опишите, как персонаж воздействует на мир..."></textarea>
           </div>
+          <p class="fm-preview-item fm-preview-instability" hidden>Ваши действия повысят Нестабильность Магического Фона</p>
+          <div class="fm-preview-reactions" hidden></div>
         </div>
       </div>
     </section>
@@ -58,6 +63,10 @@
         <span>Модификаторы Сложности</span>
         <ul class="fm-difficulty-mods-list"></ul>
       </div>
+      <div class="fm-difficulty-reactions-row" hidden>
+        <span>⚡ Реакция ГМа</span>
+        <ul class="fm-difficulty-reactions-list"></ul>
+      </div>
     </section>
 
     <div class="fm-circle-toolbar">
@@ -67,13 +76,17 @@
     </div>
     <div class="fm-circle-stage">
       <svg class="fm-svg" viewBox="0 0 460 460"></svg>
+      <button type="button" class="fm-circle-instability-btn" title="Получить Нестабильный Токен"></button>
     </div>
   </div>
 
   <div class="fm-col-side">
     <section class="fm-mods">
       <h3>Модификаторы</h3>
-      <div class="fm-mods-list"></div>
+      <div class="fm-mods-tabs"></div>
+      <p class="fm-mods-empty" hidden></p>
+      <div class="fm-mods-list fm-mods-grid"></div>
+      <div class="fm-mods-pager" hidden></div>
     </section>
 
     <section class="fm-gm-adjust">
@@ -89,6 +102,7 @@
       <div class="fm-summary-row"><span>Доступно всего</span><span class="fm-total-available">0</span></div>
       <div class="fm-summary-row"><span>Размещено на Круге</span><span class="fm-spend-sum">0</span></div>
       <div class="fm-summary-row"><span>Модификаторы (доп. стоимость)</span><span class="fm-mods-sum">0</span></div>
+      <div class="fm-summary-row fm-reaction-sum-row" hidden><span>⚡ Реакция ГМа</span><span class="fm-reaction-sum">0</span></div>
       <div class="fm-summary-row"><span>Корректировка ГМа</span><span class="fm-gm-sum">0</span></div>
       <div class="fm-summary-row fm-total"><span>Итого требуется</span><span class="fm-required-sum">0</span></div>
       <div class="fm-summary-row fm-total"><span>Остаток</span><span class="fm-remainder-sum">0</span></div>
