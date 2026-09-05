@@ -428,7 +428,7 @@
    позиционируется JS-ом (position: fixed) прямо над/под наведённой карточкой. --- */
 .fm-mod-tooltip {
   position: fixed;
-  z-index: 100;
+  z-index: 100000; /* заведомо выше любого z-index окон Foundry, чтобы не оказаться под ними */
   width: 220px;
   background: var(--fm-panel, #221f2e);
   border: 1px solid var(--fm-border, #423c58);
@@ -438,7 +438,9 @@
   color: var(--fm-text, #ece7f5);
   font-size: 12px;
   pointer-events: none;
+  display: block;
 }
+.fm-mod-tooltip[hidden] { display: none; }
 .fm-mod-tooltip-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .fm-mod-tooltip-header img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--fm-bg, #17141f); flex: 0 0 auto; }
 .fm-mod-tooltip-title { display: flex; flex-direction: column; gap: 2px; }
@@ -1729,3 +1731,65 @@
 
 /* Виджет Ресурса Сцены — иконка Фона теперь настраиваемая (img или i, см. renderIconHtml) */
 .fmrw-background-icon { width: 14px; height: 14px; object-fit: contain; }
+
+/* --- v0.25: Боковое окно «Мои Токены Маны» (tokens-panel-app.js) ------------------------- */
+
+.fmtp-root {
+  --fm-bg: #17141f;
+  --fm-panel: #221f2e;
+  --fm-panel-hover: #2c2839;
+  --fm-border: #423c58;
+  --fm-accent: #9166ea;
+  --fm-accent-rgb: 145, 102, 234;
+  --fm-gold: #cda85f;
+  --fm-danger: #e5536b;
+  --fm-danger-rgb: 229, 83, 107;
+  --fm-text: #ece7f5;
+  --fm-text-secondary: #a196b8;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 10px;
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  box-sizing: border-box;
+  font-size: 13px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fm-border) transparent;
+}
+.fmtp-root * { box-sizing: border-box; }
+.fmtp-root h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fm-text-secondary);
+}
+
+.fmtp-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 6px;
+  padding: 8px;
+  flex: 0 0 auto;
+}
+.fmtp-profile-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.fmtp-profile-label { color: var(--fm-text-secondary); }
+.fmtp-profile-value { color: var(--fm-text); display: flex; align-items: center; gap: 4px; font-weight: 600; }
+.fmtp-profile-icon { width: 13px; height: 13px; object-fit: contain; }
+
+.fmtp-tokens { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.fmtp-tokens .fm-paths-hint { margin-bottom: 6px; }
+.fmtp-tokens .fm-paths-list { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+
+/* Компактнее, чем в панели листа персонажа — тут не так много места */
+.fmtp-root .fm-path-row { padding: 4px 5px; gap: 6px; }
+.fmtp-root .fm-token { width: 20px; height: 20px; font-size: 10px; }
+.fmtp-root .fm-path-count { font-size: 10px; }
+.fmtp-root .fm-path-pool { width: 30px; }

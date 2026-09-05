@@ -1,16 +1,9 @@
 <div class="free-magic-circle">
 
   <div class="fm-col-left">
-    <section class="fm-widget fm-paths-widget">
-      <button type="button" class="fm-widget-toggle" data-widget="paths">
-        <i class="fa-solid fa-chevron-right fm-widget-chevron" aria-hidden="true"></i>
-        <span>Мои Токены Маны</span>
-      </button>
-      <div class="fm-widget-body">
-        <p class="fm-paths-hint">Клик по строке — выбрать источник активной кистью. Можно и перетащить прямо на Круг.</p>
-        <div class="fm-paths-list"></div>
-      </div>
-    </section>
+    <!-- v0.25: «Мои Токены Маны» вынесены в отдельное боковое окно (см. tokens-panel-app.js) —
+         в левой колонке остались только Докупка (сейчас скрыта) и Предпросмотр Чар, у которого
+         теперь вся высота колонки в его собственном распоряжении. -->
 
     <!-- v0.21: временно скрыт по просьбе (виджет нужно переработать) — разметка и логика
          сохранены, _renderPurchaseView() продолжает сюда рендерить, чтобы Банк/Докупка не

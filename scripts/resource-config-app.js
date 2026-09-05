@@ -36,7 +36,7 @@ import {
 import { getPriceMax, setPriceMax, PRICE_MAX_CEILING } from "./paths.js";
 import { getAutoSpellcastLimit, getSpellcastLimitOverride, setSpellcastLimitOverride } from "./spellcast-limit.js";
 import { renderIconHtml, browseForIconFile } from "./icon-utils.js";
-import { getGlobalModifierItems, createGlobalModifierItem, renderTierStars, MODIFIER_TYPE, getGmReactionItems, createGmReactionItem, isGmReactionItem } from "./modifiers.js";
+import { getGlobalModifierItems, createGlobalModifierItem, renderTierStars, MODIFIER_TYPE, MODULE_ID, getGmReactionItems, createGmReactionItem, isGmReactionItem } from "./modifiers.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 

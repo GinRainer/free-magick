@@ -37,7 +37,7 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
     super(options);
     this.actorId = options.actorId;
     this.actorName = options.actorName ?? "";
-    this.state = options.initialState ?? null;
+    this.buildState = options.initialState ?? null;
     this.sessionClosed = false;
   }
 
@@ -56,7 +56,7 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
 
   // Вызывается извне (см. gm-watch.js) при получении нового "buildStateUpdate" для этого актора
   refreshFromState(state) {
-    this.state = state;
+    this.buildState = state;
     if (this.rendered) this._renderAll();
   }
 
@@ -75,7 +75,7 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
     this._renderSectors(root);
     this._renderModifiers(root);
     this._renderReactions(root);
-    root.querySelector(".fm-gmv-intent").textContent = this.state?.intent?.trim() || "—";
+    root.querySelector(".fm-gmv-intent").textContent = this.buildState?.intent?.trim() || "—";
   }
 
   // --- Токены (Пути + лимит Цены) — читаем/пишем напрямую через флаги актора, как и в самом
@@ -131,8 +131,8 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
     const spendEl = root.querySelector(".fm-gmv-spend-list");
     const grantEl = root.querySelector(".fm-gmv-grant-list");
 
-    const spend = this.state?.spendAllocations;
-    const grant = this.state?.grantTiers;
+    const spend = this.buildState?.spendAllocations;
+    const grant = this.buildState?.grantTiers;
 
     if (!spend) {
       spendEl.innerHTML = `<p class="fm-gmv-hint">Пока нет данных — ждём первое изменение в Круге у игрока.</p>`;
@@ -166,7 +166,7 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
 
   _renderModifiers(root) {
     const list = root.querySelector(".fm-gmv-mods-list");
-    const modsOn = this.state?.modsOn ?? {};
+    const modsOn = this.buildState?.modsOn ?? {};
     const modifiers = getEffectiveModifiers(this.actor);
 
     if (modifiers.length === 0) {
@@ -202,7 +202,7 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
         const value = ev.currentTarget.checked;
         // Оптимистично обновляем локально показанное состояние, не дожидаясь ответного
         // broadcast от игрока — тот всё равно придёт следом и подтвердит.
-        if (this.state) this.state.modsOn = { ...(this.state.modsOn ?? {}), [modKey]: value };
+        if (this.buildState) this.buildState.modsOn = { ...(this.buildState.modsOn ?? {}), [modKey]: value };
         game.socket.emit(`module.${MODULE_ID}`, {
           action: "gmSetModifier",
           actorId: this.actorId,
@@ -224,7 +224,7 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
     const list = root.querySelector(".fm-gmv-reactions-list");
     if (!list) return; // старый шаблон gm-viewer.hbs без секции — не ломаемся
 
-    const reactionsOn = this.state?.gmReactionsOn ?? {};
+    const reactionsOn = this.buildState?.gmReactionsOn ?? {};
     const reactions = getGmReactionModifiers();
 
     if (reactions.length === 0) {
@@ -256,7 +256,7 @@ export class FreeMagicGmViewer extends HandlebarsApplicationMixin(ApplicationV2)
       input.addEventListener("change", (ev) => {
         const modKey = ev.currentTarget.dataset.reactionKey;
         const value = ev.currentTarget.checked;
-        if (this.state) this.state.gmReactionsOn = { ...(this.state.gmReactionsOn ?? {}), [modKey]: value };
+        if (this.buildState) this.buildState.gmReactionsOn = { ...(this.buildState.gmReactionsOn ?? {}), [modKey]: value };
         game.socket.emit(`module.${MODULE_ID}`, {
           action: "gmSetReaction",
           actorId: this.actorId,

@@ -1,5 +1,6 @@
 import { MODULE_ID, getBankStatus, setBankValue } from "./bank.js";
 import { FreeMagicBankConfig } from "./bank-config-app.js";
+import { FreeMagicTokensPanel } from "./tokens-panel-app.js";
 import { PATHS, getItemBonusByPath, getPriceMax } from "./paths.js";
 import { getEffectiveModifiers, getGmReactionModifiers, renderTierStars, getGlobalTierOverride, setGlobalTierOverride, MODIFIER_TYPE } from "./modifiers.js";
 import { getSpellcastLimit } from "./spellcast-limit.js";
@@ -190,9 +191,16 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Свёрнуты по умолчанию — открываются кликом по заголовку (см. _toggleWidget).
     // Предпросмотр Чар — исключение, он раскрыт сразу, чтобы live-обратная связь была видна.
-    this.pathsExpanded = false;
+    // v0.25: «Мои Токены Маны» больше не виджет в левой колонке — вынесен в отдельное боковое
+    // окно (см. tokens-panel-app.js), поэтому pathsExpanded/fm-paths-widget здесь больше нет.
     this.purchaseExpanded = false;
     this.previewExpanded = true;
+
+    // Боковое окно «Мои Токены Маны» — создаётся вместе с Кругом (см. _onFirstRender) и живёт
+    // ровно столько же (закрывается вместе с Кругом, см. _onClose). Ссылка нужна, чтобы все
+    // существующие места, что раньше обновляли список токенов у себя внутри, теперь обновляли
+    // список именно в этом отдельном окне — см. _refreshTokensPanel().
+    this.tokensPanel = null;
 
     // Корректировка ГМа — храним как поле, а не читаем из DOM по требованию: это нужно
     // и для подсчёта итогов, и для подмешивания бонуса в пул Токенов Маны (см. _generatedBySource).
@@ -235,17 +243,10 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
   // самом первом рендере — дальнейшие ресайзы/перемещения окна пользователем не трогает.
   async _onFirstRender(context, options) {
     await super._onFirstRender?.(context, options);
-    const width = Math.max(1150, Math.round(window.innerWidth * 0.65));
-    const height = Math.max(760, Math.round(window.innerHeight * 0.75));
-    await this.setPosition({
-      width,
-      height,
-      left: Math.round((window.innerWidth - width) / 2),
-      top: Math.round((window.innerHeight - height) / 2)
-    });
 
-    // Регистрируем себя как "живое" окно этого актора на этом клиенте (см. liveInstances выше)
-    // и сообщаем ГМу, что сборка началась — появится строка в его виджете наблюдения.
+    // v0.25: уведомление ГМа — самое важное, что должно произойти при открытии Круга, поэтому
+    // делаем это ПЕРВЫМ делом, до любых побочных вещей вроде позиционирования окна или бокового
+    // окна токенов — ошибка там не должна иметь шанса помешать этому.
     if (this.actor) {
       liveInstances.set(this.actor.id, this);
       const buildOpenedData = {
@@ -261,11 +262,37 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       if (game.user.isGM) handleGmWatchMessage(buildOpenedData);
     }
 
+    const width = Math.max(1150, Math.round(window.innerWidth * 0.65));
+    const height = Math.max(760, Math.round(window.innerHeight * 0.75));
+    await this.setPosition({
+      width,
+      height,
+      left: Math.round((window.innerWidth - width) / 2),
+      top: Math.round((window.innerHeight - height) / 2)
+    });
+
+    // v0.25 — боковое окно «Мои Токены Маны» (см. tokens-panel-app.js), пристыкованное слева от
+    // самого Круга. Обёрнуто в try/catch намеренно: сбой здесь не должен мешать основному окну
+    // Круга нормально открыться и работать.
+    try {
+      this.tokensPanel = new FreeMagicTokensPanel({ circle: this });
+      await this.tokensPanel.render(true);
+      const pos = this.position;
+      await this.tokensPanel.setPosition({
+        left: Math.max(0, pos.left - 240),
+        top: pos.top,
+        width: 220,
+        height: pos.height
+      });
+    } catch (err) {
+      console.warn("Free Magic | Не удалось открыть боковое окно «Мои Токены Маны»", err);
+    }
+
     // Если ГМ поменяет запас Путей/Максимум Цены (флаги актора) прямо из своего окна
     // наблюдения — эта же панель у игрока должна обновиться сама, без перезапуска окна.
     this._updateActorHookId = Hooks.on("updateActor", (actor) => {
       if (actor.id !== this.actor?.id) return;
-      this._loadPathPools().then(() => this._renderPathsPanel(this.element));
+      this._loadPathPools().then(() => this._refreshTokensPanel());
       this._loadPriceMax().then(() => this._renderPurchaseView(this.element.querySelector(".fm-purchase-view")));
       this._recalculate(this.element);
     });
@@ -279,7 +306,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!isOwnActorItem && !isGlobalModifier) return;
       if (!this.element) return;
       this._renderModifiers(this.element);
-      this._renderPathsPanel(this.element); // пул Маны мог измениться
+      this._refreshTokensPanel(); // пул Маны мог измениться
       this._recalculate(this.element);
     };
     this._itemHooks = [
@@ -296,6 +323,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this._updateActorHookId) Hooks.off("updateActor", this._updateActorHookId);
     this._itemHooks?.forEach(({ name, id }) => Hooks.off(name, id));
     this._modTooltipEl?.remove(); // всплывающий предпросмотр Модификатора (v0.24) — не оставляем висеть в DOM
+    this.tokensPanel?.close(); // боковое окно «Мои Токены Маны» (v0.25) закрывается вместе с Кругом
     if (this.actor) {
       liveInstances.delete(this.actor.id);
       const buildClosedData = { action: "buildClosed", actorId: this.actor.id };
@@ -314,7 +342,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     const root = this.element;
     if (!root) return;
     this._renderModifiers(root);
-    this._renderPathsPanel(root);
+    this._refreshTokensPanel();
     this._recalculate(root);
     ui.notifications?.info(`ГМ изменил модификатор «${mod.label}»`);
   }
@@ -330,7 +358,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     this.gmReactionsOn[modKey] = Boolean(value);
     const root = this.element;
     if (!root) return;
-    this._renderPathsPanel(root);
+    this._refreshTokensPanel();
     this._recalculate(root);
     if (value) ui.notifications?.warn(`ГМ применил реакцию «${reaction.label}» к вашей сборке!`);
   }
@@ -366,7 +394,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!this._listenersBound) {
       root.querySelector(".fm-gm-value").addEventListener("input", (ev) => {
         this.gmAdjust = Number(ev.currentTarget.value) || 0;
-        this._renderPathsPanel(root); // пул Маны мог измениться (отрицательная корректировка = бонус в Ману)
+        this._refreshTokensPanel(); // пул Маны мог измениться (отрицательная корректировка = бонус в Ману)
         this._recalculate(root);
       });
       root.querySelector(".fm-cast").addEventListener("click", () => this._onCast(root));
@@ -381,7 +409,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     this._renderModifiers(root);
-    this._renderPathsPanel(root);
+    this._refreshTokensPanel();
     this._renderPurchaseView(root.querySelector(".fm-purchase-view"));
     this._renderCircle(root);
     this._renderInstabilityButton(root);
@@ -390,19 +418,26 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _toggleWidget(root, widgetKey) {
-    if (widgetKey === "paths") this.pathsExpanded = !this.pathsExpanded;
     if (widgetKey === "purchase") this.purchaseExpanded = !this.purchaseExpanded;
     if (widgetKey === "preview") this.previewExpanded = !this.previewExpanded;
     this._syncWidgetState(root);
   }
 
   _syncWidgetState(root) {
-    const pathsWidget = root.querySelector(".fm-paths-widget");
-    pathsWidget.classList.toggle("fm-expanded", this.pathsExpanded);
     const purchaseWidget = root.querySelector(".fm-purchase-widget");
     purchaseWidget?.classList.toggle("fm-expanded", this.purchaseExpanded);
     const previewWidget = root.querySelector(".fm-preview-widget");
     previewWidget.classList.toggle("fm-expanded", this.previewExpanded);
+  }
+
+  /** Обновляет список «Мои Токены Маны» в боковом окне (см. tokens-panel-app.js), если оно
+   * сейчас открыто и отрисовано. Раньше этот список жил прямо в circle.hbs и обновлялся через
+   * _renderPathsPanel(this.element) — теперь _renderPathsPanel() всё та же функция, просто
+   * нацеленная на DOM бокового окна вместо DOM самого Круга (у которого этого списка больше нет). */
+  _refreshTokensPanel() {
+    if (this.tokensPanel?.rendered && this.tokensPanel.element) {
+      this._renderPathsPanel(this.tokensPanel.element);
+    }
   }
 
   // --- Максимум Цены (флаг актора, теперь редактируется только в GM Settings → «Игроки»,
@@ -519,14 +554,14 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       row.addEventListener("click", (ev) => {
         if (ev.target.classList.contains("fm-path-pool")) return; // не перехватываем клик по полю ввода
         this.activePath = src.key;
-        this._renderPathsPanel(root);
+        this._refreshTokensPanel();
       });
 
       if (isNamedPath) {
         row.querySelector(".fm-path-pool").addEventListener("change", async (ev) => {
           this.pathPools[src.key] = Number(ev.currentTarget.value) || 0;
           await this._savePathPools();
-          this._renderPathsPanel(root);
+          this._refreshTokensPanel();
         });
       }
 
@@ -681,7 +716,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
 
       card.querySelector("input[type=checkbox]").addEventListener("change", (ev) => {
         this.modsOn[key] = ev.currentTarget.checked;
-        this._renderPathsPanel(root); // пул Маны мог измениться
+        this._refreshTokensPanel(); // пул Маны мог измениться
         this._recalculate(root);
         this._renderModifiers(root); // перерисовать подсветку активной карточки
       });
@@ -836,7 +871,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     arr.push(sourceKey);
     this._renderCircle(root);
-    this._renderPathsPanel(root);
+    this._refreshTokensPanel();
     this._recalculate(root);
   }
 
@@ -858,7 +893,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     this._renderCircle(root);
-    this._renderPathsPanel(root);
+    this._refreshTokensPanel();
     this._recalculate(root);
   }
 
@@ -922,7 +957,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
           btn.addEventListener("click", () => {
             this.grantTiers[sector.key] = Number(btn.dataset.tier);
             renderTiers();
-            this._renderPathsPanel(this.element);
+            this._refreshTokensPanel();
             this._recalculate(this.element);
           });
         });
@@ -1005,7 +1040,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!ok) return;
 
     this._renderPurchaseView(container);
-    this._renderPathsPanel(this.element);
+    this._refreshTokensPanel();
     this._recalculate(this.element);
   }
 
@@ -1031,7 +1066,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     const ok = await this._drawInstabilityToken();
     if (!ok) return;
 
-    this._renderPathsPanel(root);
+    this._refreshTokensPanel();
     this._recalculate(root); // сама и вызовет _renderInstabilityButton через _renderPreview-цепочку ниже
   }
 
@@ -1042,18 +1077,24 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     const btn = root.querySelector(".fm-circle-instability-btn");
     if (!btn) return;
 
-    const limit = getSpellcastLimit(this.actor);
-    const hasLimit = Number.isFinite(limit) && limit > 0;
-    const ratio = hasLimit ? Math.min(1, this.unstableTokens / limit) : 0;
-    const remainingPct = Math.round((1 - ratio) * 100);
-    const depleted = !hasLimit || this.unstableTokens >= limit;
+    try {
+      const limit = getSpellcastLimit(this.actor);
+      const hasLimit = Number.isFinite(limit) && limit > 0;
+      const ratio = hasLimit ? Math.min(1, this.unstableTokens / limit) : 0;
+      const remainingPct = Math.round((1 - ratio) * 100);
+      const depleted = !hasLimit || this.unstableTokens >= limit;
 
-    btn.innerHTML = renderIconHtml(getBackgroundIcon(), { className: "fm-circle-instability-icon" });
-    btn.style.setProperty("--fm-instability-remaining", String(remainingPct));
-    btn.classList.toggle("fm-depleted", depleted);
-    btn.title = hasLimit
-      ? `Получить Нестабильный Токен (${this.unstableTokens}/${limit} от Заклинательного Лимита за эту сборку)`
-      : "Заклинательный Лимит не задан — обратитесь к ГМу";
+      btn.innerHTML = renderIconHtml(getBackgroundIcon(), { className: "fm-circle-instability-icon" });
+      btn.style.setProperty("--fm-instability-remaining", String(remainingPct));
+      btn.classList.toggle("fm-depleted", depleted);
+      btn.title = hasLimit
+        ? `Получить Нестабильный Токен (${this.unstableTokens}/${limit} от Заклинательного Лимита за эту сборку)`
+        : "Заклинательный Лимит не задан — обратитесь к ГМу";
+    } catch (err) {
+      // Защита от неожиданных данных (например, отсутствующего @cast у конкретного актора) —
+      // не должно ронять весь рендер окна и уж тем более мешать открытию/уведомлению ГМа.
+      console.warn("Free Magic | Не удалось обновить кнопку Нестабильности", err);
+    }
   }
 
   // --- Примерная Сложность (см. дизайн-документ: «Определение сложности броска») ---
