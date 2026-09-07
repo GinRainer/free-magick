@@ -6,30 +6,41 @@ import { MODULE_ID, setBankValue, getBankStatus } from "./bank.js";
 import { registerSheetPanel } from "./sheet-panel.js";
 import { registerGmWatch } from "./gm-watch.js";
 import { registerResourceWidget } from "./resource-widget.js";
-import { ModifierDataModel, MODIFIER_TYPE } from "./modifiers.js";
-import { FreeMagicModifierSheet } from "./modifier-sheet.js";
 import * as SceneResource from "./scene-resource.js";
+import * as Modifiers from "./modifiers.js";
+import { FreeMagicModifierSheet } from "./modifier-sheet.js";
+
+
+// v0.25.2 — ДИАГНОСТИКА: этот лог выполняется на ВЕРХНЕМ УРОВНЕ модуля, в момент, когда браузер
+// просто ЗАГРУЖАЕТ и парсит файл — без каких-либо хуков Foundry, без проверок роли пользователя,
+// без открытия окон. Если этой строки нет в консоли конкретного клиента вообще — это железное
+// доказательство, что клиент работает со СТАРОЙ версией файла (не обновилось на сервере, кэш
+// браузера, или смотрит не в ту папку модуля) — и никакой код внутри модуля вообще не имеет
+// значения, пока это не решено. Если строка ЕСТЬ — файл точно свежий, и проблему нужно искать
+// дальше по журналу (см. другие [FM DIAGNOSTIC] строки ниже).
+console.log("%c[FM DIAGNOSTIC] free-magic.js загружен, версия модуля должна быть 0.25.2", "background:#9166ea;color:#fff;padding:2px 6px;border-radius:3px;");
 
 Hooks.once("init", () => {
   console.log("Free Magic | Инициализация модуля");
+  Object.assign(CONFIG.Item.dataModels, {
+    [Modifiers.MODIFIER_TYPE]: Modifiers.ModifierDataModel
+});
+const DocumentSheetConfig = foundry.applications.apps.DocumentSheetConfig;
 
+DocumentSheetConfig.registerSheet(
+  foundry.documents.Item,
+  MODULE_ID,
+  FreeMagicModifierSheet,
+  {
+    types: [Modifiers.MODIFIER_TYPE],
+    makeDefault: true,
+    label: "Модификатор Свободной Магии"
+  }
+);
   registerSheetPanel();
   registerGmWatch();
   registerResourceWidget(); // v0.16 — Базовое отображение Ресурса Сцены, виден всем клиентам
   SceneResource.registerSceneResourceSettings(); // v0.14 — модель данных Ресурса Сцены (раздел 11), UI ещё впереди (v0.15+)
-
-  // v0.19 — регистрация Item sub-type "Модификатор" (free-magic.modifier, см. modifiers.js):
-  // настоящий тип предмета Foundry со своей DataModel, а не флаги поверх generic Item, как
-  // было в v0.18. Позволяет заводить такие предметы прямо в Skill Tree, как любой другой
-  // тип предмета системы. CONFIG.Item.dataModels — стандартный механизм регистрации схемы
-  // для module-defined sub-types (Foundry v11+); DocumentSheetConfig.registerSheet — привязка
-  // собственного листа именно к этому типу (см. modifier-sheet.js).
-  CONFIG.Item.dataModels[MODIFIER_TYPE] = ModifierDataModel;
-  foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, MODULE_ID, FreeMagicModifierSheet, {
-    types: [MODIFIER_TYPE],
-    makeDefault: true,
-    label: "Лист Модификатора Магии"
-  });
 
   // Кнопка в стандартной вкладке Settings (Настройки игры → «Свободная Магия») — постоянный,
   // не зависящий от хотбара способ открыть окно GM Settings v2. Виден только ГМу (restricted).
@@ -38,17 +49,13 @@ Hooks.once("init", () => {
   game.settings.registerMenu(MODULE_ID, "resourceConfigMenu", {
     name: "Настройка ГМа",
     label: "Открыть окно настройки",
-    hint: "Каталог Элементов/Аспектов, активный Ресурс на текущей Сцене, параметры игроков (Элемент / Объём Сосуда / Заклинательный Лимит).",
+    hint: "Каталог Элементов/Аспектов, активный Ресурс на текущей Сцене, параметры игроков (Элемент / Аспект / Объём Сосуда / Заклинательный Лимит), Модификаторы, Реакция ГМа.",
     icon: "fa-solid fa-hurricane",
     type: FreeMagicResourceConfig,
     restricted: true
   });
 
   // Мировой счётчик банка Магического Фона (видит и правит только ГМ)
-  // TODO(v0.15+): этот блок (backgroundBank*) станет избыточным, когда Базовое/Упрощённое
-  // отображение виджета переедет на scene-resource.js — Фон переезжает туда полностью
-  // (см. дизайн-документ, раздел 11.2, "⟳ Пересмотрено"). Пока не трогаем, чтобы не сломать
-  // рабочий v0.13 раньше времени.
   game.settings.register(MODULE_ID, "backgroundBankValue", {
     scope: "world",
     config: false,
@@ -73,10 +80,16 @@ Hooks.once("init", () => {
     type: Boolean,
     default: false
   });
+  
 });
 
 Hooks.once("ready", () => {
-  console.log("Free Magic | Модуль готов");
+  console.log("%c[FM DIAGNOSTIC] Hooks.ready сработал. Я:", "background:#9166ea;color:#fff;padding:2px 6px;border-radius:3px;", {
+    userName: game.user?.name,
+    userId: game.user?.id,
+    isGM: game.user?.isGM,
+    character: game.user?.character?.name ?? "(нет назначенного персонажа)"
+  });
 
   if (game.user.isGM) ensureGmConfigMacro();
 
@@ -105,8 +118,6 @@ async function ensureGmConfigMacro() {
   try {
     const existing = game.macros.find((m) => m.getFlag(MODULE_ID, "isGmConfigMacro"));
     if (existing) {
-      // v0.15: старые макросы указывали на FreeMagicBankConfig — подтягиваем команду
-      // на новое окно настройки, чтобы не пришлось пересоздавать макрос руками на каждую версию.
       if (existing.command !== GM_CONFIG_MACRO_COMMAND) {
         await existing.update({ command: GM_CONFIG_MACRO_COMMAND });
         console.log("Free Magic | Команда макроса настройки ГМа обновлена под текущую версию");
@@ -122,7 +133,6 @@ async function ensureGmConfigMacro() {
       flags: { [MODULE_ID]: { isGmConfigMacro: true } }
     });
 
-    // Ищем первый свободный слот на хотбаре (1..50) и кладём макрос туда
     const occupied = new Set(Object.values(game.user.hotbar ?? {}));
     let slot = null;
     for (let i = 1; i <= 50; i++) {
@@ -152,17 +162,17 @@ const CANDIDATE_HOOKS = [
 // Собственные окна модуля тоже проходят через renderApplicationV2 (это универсальный хук,
 // срабатывающий на ЛЮБое приложение) — и у FreeMagicCircle/FreeMagicBankConfig тоже есть
 // свойство .actor, так что их легко спутать с самим листом персонажа. Явно исключаем по ID.
-const OWN_APP_IDS = new Set(["free-magic-circle", "free-magic-bank-config", "free-magic-gm-viewer"]);
+const OWN_APP_IDS = new Set([
+  "free-magic-circle",
+  "free-magic-tokens-panel",
+  "free-magic-bank-config",
+  "free-magic-gm-viewer",
+  "free-magic-resource-config"
+]);
 
 function tryInjectButton(app, htmlEl, hookName) {
   if (OWN_APP_IDS.has(app.id)) return; // это наше собственное окно, не лист персонажа
 
-  // ВАЖНО: используем app.document, а НЕ app.actor. У app.actor есть много посторонних
-  // приложений — например, лист ПРЕДМЕТА, вложенного в актора, тоже имеет удобное свойство
-  // .actor, указывающее на владельца, но сам лист при этом относится к Item, а не к Actor.
-  // app.document — это именно тот документ, который редактирует ЭТО приложение; для листа
-  // персонажа он будет Actor, для листа предмета — Item, и т.д. Это отличает настоящий
-  // лист персонажа от чего угодно другого, что просто "знает" об этом персонаже.
   const actor = app.document ?? app.object;
   if (!actor || actor.documentName !== "Actor" || actor.type !== "character") return;
 
@@ -174,20 +184,11 @@ function tryInjectButton(app, htmlEl, hookName) {
     return;
   }
 
-  // Дополнительная защита: некоторые модули (например, Daggerheart Sleek UI) рендерят
-  // мелкие сателлитные компоненты (плавающая панель вкладок и т.п.), которые тоже проходят
-  // через рендер-хуки. Настоящее окно приложения Foundry всегда имеет класс "application"
-  // на корневом элементе — если его нет, это не лист персонажа, и мы вообще ничего не трогаем
-  // (в том числе не удаляем уже существующую кнопку — раньше баг был именно в этом: такие
-  // "чужие" срабатывания стирали настоящую кнопку и не создавали её заново).
   if (!root.classList?.contains("application")) {
     console.log(`Free Magic | Пропускаю "${hookName}" — это не окно приложения (root без класса .application)`, root);
     return;
   }
 
-  // Прежде всего ищем ПРЯМОГО потомка корня — это всегда настоящая шапка окна Foundry
-  // (её рендерит сам движок при отрисовке окна, а не система/модуль листа). Только если
-  // такого нет — расширяем поиск вглубь DOM.
   const header =
     root.querySelector(":scope > .window-header") ??
     root.querySelector(":scope > header") ??
@@ -200,11 +201,6 @@ function tryInjectButton(app, htmlEl, hookName) {
     return;
   }
 
-  // ВАЖНО: у некоторых модулей-рескинов листа (например, Daggerheart Sleek UI) старая копия
-  // нашей кнопки может оказаться в СОВСЕМ ДРУГОМ поддереве DOM — не внутри текущего root,
-  // а где-то ещё в документе (полупрозрачная "призрачная" копия на скриншотах). Поэтому чистим
-  // не только root, а ВЕСЬ документ — но только копии, помеченные тем же ID актора, чтобы не
-  // трогать кнопки на листах других персонажей.
   document.querySelectorAll(`.free-magic-open-btn[data-actor-id="${actor.id}"]`).forEach((el) => el.remove());
 
   const btn = document.createElement("a");
@@ -214,10 +210,20 @@ function tryInjectButton(app, htmlEl, hookName) {
   btn.style.cursor = "pointer";
   btn.addEventListener("click", (ev) => {
     ev.preventDefault();
-    new FreeMagicCircle({ actor }).render(true);
+    console.log("%c[FM DIAGNOSTIC] Клик по кнопке «Свободная Магия»", "background:#9166ea;color:#fff;padding:2px 6px;border-radius:3px;", {
+      actorName: actor.name,
+      actorId: actor.id,
+      isGM: game.user?.isGM
+    });
+    try {
+      const circle = new FreeMagicCircle({ actor });
+      circle.render(true);
+      console.log("[FM DIAGNOSTIC] FreeMagicCircle создан и render(true) вызван без исключений");
+    } catch (err) {
+      console.error("[FM DIAGNOSTIC] Исключение при создании/рендере FreeMagicCircle", err);
+    }
   });
 
-  // Вставляем СЛЕВА от кнопки закрытия (крестика), а не в конец шапки
   const closeBtn =
     header.querySelector('[data-action="close"]') ??
     header.querySelector(".header-control.close") ??
@@ -240,8 +246,11 @@ for (const hookName of CANDIDATE_HOOKS) {
   });
 }
 
-// Глобальный доступ для макросов: открыть Круг вручную, либо (для ГМа) окна настройки Банка/наблюдения.
-// SceneResource — весь модуль v0.14 целиком, чтобы можно было проверить модель данных из консоли
-// (например, SceneResource.setResourceActive("fire", true, canvas.scene.id)) ещё до того, как
-// появится собственный UI поверх неё (v0.15+).
-window.FreeMagic = { FreeMagicCircle, FreeMagicBankConfig, FreeMagicGmViewer, FreeMagicResourceConfig, SceneResource };
+window.FreeMagic = {
+  FreeMagicCircle,
+  FreeMagicBankConfig,
+  FreeMagicGmViewer,
+  FreeMagicResourceConfig,
+  SceneResource,
+  Modifiers
+};

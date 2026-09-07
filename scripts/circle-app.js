@@ -171,6 +171,11 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
     super(options);
     this.actor = options.actor ?? null;
+    console.log("%c[FM DIAGNOSTIC] Конструктор FreeMagicCircle выполнен", "background:#cda85f;color:#221a0d;padding:2px 6px;border-radius:3px;", {
+      actor: this.actor?.name,
+      actorId: this.actor?.id,
+      isGM: game.user?.isGM
+    });
 
     // Временный запас по Путям — до готовности Item type «Путь Магии» (v0.5).
     // Персистентно (флаг актора, см. _loadPathPools). Значение по умолчанию — до загрузки сохранённого.
@@ -242,11 +247,13 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
   // и секторам вроде "Целеуказание"/"Дистанция" не хватало места. Срабатывает только на
   // самом первом рендере — дальнейшие ресайзы/перемещения окна пользователем не трогает.
   async _onFirstRender(context, options) {
+    console.log("%c[FM DIAGNOSTIC] _onFirstRender вызван", "background:#cda85f;color:#221a0d;padding:2px 6px;border-radius:3px;", { actor: this.actor?.name });
     await super._onFirstRender?.(context, options);
 
     // v0.25: уведомление ГМа — самое важное, что должно произойти при открытии Круга, поэтому
     // делаем это ПЕРВЫМ делом, до любых побочных вещей вроде позиционирования окна или бокового
     // окна токенов — ошибка там не должна иметь шанса помешать этому.
+    console.log("[FM DIAGNOSTIC] this.actor перед отправкой buildOpened:", this.actor);
     if (this.actor) {
       liveInstances.set(this.actor.id, this);
       const buildOpenedData = {
@@ -255,11 +262,14 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
         actorName: this.actor.name,
         userId: game.user.id
       };
+      console.log("%c[FM DIAGNOSTIC] Отправляю game.socket.emit(buildOpened)", "background:#cda85f;color:#221a0d;padding:2px 6px;border-radius:3px;", buildOpenedData, "канал:", `module.${MODULE_ID}`);
       game.socket.emit(`module.${MODULE_ID}`, buildOpenedData);
       // Сокет не доставляет отправителю его же сообщение — если Круг открывает сам ГМ
       // (тестирует лично или ведёт NPC), без этого прямого вызова виджет наблюдения у него
       // никогда бы не появился (см. подробный комментарий в gm-watch.js).
       if (game.user.isGM) handleGmWatchMessage(buildOpenedData);
+    } else {
+      console.warn("[FM DIAGNOSTIC] this.actor пуст — уведомление ГМу отправлено НЕ будет. Окно открыто без актора?");
     }
 
     const width = Math.max(1150, Math.round(window.innerWidth * 0.65));

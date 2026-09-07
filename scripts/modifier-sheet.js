@@ -19,6 +19,8 @@ const { ItemSheetV2 } = foundry.applications.sheets;
  * в вашей связке Foundry/Daggerheart/Sleek UI — см. подробности в CHANGELOG-v0.19/v0.20.md.
  */
 export class FreeMagicModifierSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+
+
   static DEFAULT_OPTIONS = {
     classes: ["free-magic-modifier-sheet"],
     position: { width: 540, height: 760 },
