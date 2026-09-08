@@ -4,6 +4,7 @@ import { renderIconHtml } from "./icon-utils.js";
 import { getActorElements, findCatalogEntry } from "./scene-resource.js";
 import { getMagicCircle, setMagicCircle, getMagicType, setMagicType, getMagicTypeLabel, MAGIC_TYPES } from "./actor-profile.js";
 import { getAutoSpellcastLimit, getSpellcastLimitOverride, setSpellcastLimitOverride, getSpellcastLimit } from "./spellcast-limit.js";
+import { getTagSummaries } from "./tags.js";
 
 // Открытые/закрытые панели и активная вкладка держим в памяти клиента (не персистентно —
 // просто чтобы при каждом перерендере листа персонажа (а Foundry делает это часто, на любое
@@ -169,6 +170,7 @@ function injectPanel(app, htmlEl) {
   renderProfileRow(panel.querySelector(".fm-sheet-profile-row"), actor);
   renderPathsList(panel.querySelector(".fm-sheet-paths-list"), actor);
   renderModifiersTab(panel.querySelector(".fm-sheet-modifiers-tab-body"), actor);
+  renderTagsTab(panel.querySelector(".fm-sheet-tags-list"), actor);
 }
 
 // --- Вкладки «Пути Магии» / «Модификаторы» (v0.20) ------------------------------------------
@@ -500,4 +502,27 @@ function renderModifiersTab(container, actor) {
       renderModifiersTab(container, actor);
     });
   });
+}
+
+// --- Вкладка «Тэги» (v0.26) — свойства-тэги на листе персонажа -----------------------------
+// Тэги — это предметы типа Feature, у которых выставлен флаг flags.free-magic.isTag.
+// Показываются компактно: иконка + название, описание — в тултипе при наведении.
+
+function renderTagsTab(container, actor) {
+  if (!container) return;
+  const tags = getTagSummaries(actor);
+  if (!tags.length) {
+    container.innerHTML = `<p class="fm-sheet-hint">Тэгов пока нет — отметьте чекбокс «Является тэгом» на любом свойстве (Feature) персонажа.</p>`;
+    return;
+  }
+  container.innerHTML = tags
+    .map((t) => {
+      const iconHtml = renderIconHtml(t.icon, { className: "fm-sheet-tag-icon" });
+      const tooltip = (t.description || "").replace(/<[^>]*>/g, "").replace(/"/g, "&quot;").substring(0, 300);
+      return `<div class="fm-sheet-tag-item" title="${tooltip}">
+        ${iconHtml}
+        <span class="fm-sheet-tag-name">${t.label}</span>
+      </div>`;
+    })
+    .join("");
 }

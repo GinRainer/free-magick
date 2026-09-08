@@ -1037,6 +1037,92 @@
 }
 .fm-sheet-bonus-remove:hover { color: #fff; }
 
+/* --- v0.26: Тэги на листе персонажа и в карточке Броска Дуальности ------------------------ */
+.fm-tag-checkbox-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+  background: var(--fm-panel, #221f2e);
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 6px;
+}
+.fm-tag-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fm-text, #ece7f5);
+  font-size: 12px;
+  cursor: pointer;
+}
+.fm-tag-checkbox-label i { color: var(--fm-accent, #9166ea); }
+.fm-tag-checkbox { accent-color: var(--fm-accent, #9166ea); }
+
+.fm-sheet-tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fm-sheet-tag-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 6px 8px;
+  background: var(--fm-panel);
+  border: 1px solid var(--fm-border);
+  border-radius: 5px;
+  color: var(--fm-text);
+  cursor: help;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.fm-sheet-tag-item:hover {
+  background: var(--fm-panel-hover);
+  border-color: var(--fm-accent);
+  transform: translateX(2px);
+}
+.fm-sheet-tag-icon { width: 20px; height: 20px; object-fit: contain; flex: 0 0 auto; }
+.fm-sheet-tag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.fm-duality-tags-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(34, 31, 46, 0.92);
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 6px;
+  color: var(--fm-text, #ece7f5);
+}
+.fm-duality-tags-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fm-text-secondary, #a196b8);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fm-duality-tags-title i { color: var(--fm-accent, #9166ea); }
+.fm-duality-tags-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.fm-duality-tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 3px 6px;
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 4px;
+  background: var(--fm-panel, #221f2e);
+  color: var(--fm-text, #ece7f5);
+  cursor: help;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.fm-duality-tag-item:hover { border-color: var(--fm-accent, #9166ea); color: #fff; }
+.fm-duality-tag-icon { width: 15px; height: 15px; object-fit: contain; flex: 0 0 auto; }
+.fm-duality-tag-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* --- Постоянный виджет ГМа со списком открытых сборок заклинаний --- */
 #free-magic-gm-watch {
   position: fixed;
