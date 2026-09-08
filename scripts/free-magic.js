@@ -7,7 +7,9 @@ import { registerSheetPanel } from "./sheet-panel.js";
 import { registerGmWatch } from "./gm-watch.js";
 import { registerResourceWidget } from "./resource-widget.js";
 import * as SceneResource from "./scene-resource.js";
+import { ModifierDataModel, MODIFIER_TYPE } from "./modifiers.js";
 import * as Modifiers from "./modifiers.js";
+import { FreeMagicModifierSheet } from "./modifier-sheet.js";
 
 // v0.25.2 — ДИАГНОСТИКА: этот лог выполняется на ВЕРХНЕМ УРОВНЕ модуля, в момент, когда браузер
 // просто ЗАГРУЖАЕТ и парсит файл — без каких-либо хуков Foundry, без проверок роли пользователя,
@@ -16,10 +18,17 @@ import * as Modifiers from "./modifiers.js";
 // браузера, или смотрит не в ту папку модуля) — и никакой код внутри модуля вообще не имеет
 // значения, пока это не решено. Если строка ЕСТЬ — файл точно свежий, и проблему нужно искать
 // дальше по журналу (см. другие [FM DIAGNOSTIC] строки ниже).
-console.log("%c[FM DIAGNOSTIC] free-magic.js загружен, версия модуля должна быть 0.25.2", "background:#9166ea;color:#fff;padding:2px 6px;border-radius:3px;");
+console.log("%c[FM DIAGNOSTIC] free-magic.js загружен, версия модуля 0.25.4", "background:#9166ea;color:#fff;padding:2px 6px;border-radius:3px;");
 
 Hooks.once("init", () => {
   console.log("Free Magic | Инициализация модуля");
+
+  CONFIG.Item.dataModels[MODIFIER_TYPE] = ModifierDataModel;
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, MODULE_ID, FreeMagicModifierSheet, {
+    types: [MODIFIER_TYPE],
+    makeDefault: true,
+    label: "Модификатор Магии"
+  });
 
   registerSheetPanel();
   registerGmWatch();

@@ -55,6 +55,8 @@ export const DEFAULT_MODIFIER_CATEGORY = "Общие";
  * category/requirement — см. пояснение в шапке файла (v0.21).
  */
 export class ModifierDataModel extends foundry.abstract.TypeDataModel {
+  static DEFAULT_ICON = "icons/svg/dice.svg";
+
   static defineSchema() {
     const fields = foundry.data.fields;
     const tierSchema = () =>
@@ -139,7 +141,7 @@ function toSummary(item, extra = {}, tierOverride = null) {
 
 /** Создаёт новый личный предмет-модификатор на акторе и возвращает его (для открытия листа). */
 export async function createModifierItem(actor, name = "Новый модификатор") {
-  const [item] = await actor.createEmbeddedDocuments("Item", [{ name, type: MODIFIER_TYPE }]);
+  const [item] = await actor.createEmbeddedDocuments("Item", [{ name, type: MODIFIER_TYPE, img: ModifierDataModel.DEFAULT_ICON }]);
   return item;
 }
 
@@ -158,7 +160,7 @@ export function getActorModifiers(actor) {
 
 /** Создаёт новый ОБЩИЙ (мировой) предмет-модификатор — без актора-владельца. */
 export async function createGlobalModifierItem(name = "Новый общий модификатор") {
-  const [item] = await Item.createDocuments([{ name, type: MODIFIER_TYPE }]);
+  const [item] = await Item.createDocuments([{ name, type: MODIFIER_TYPE, img: ModifierDataModel.DEFAULT_ICON }]);
   return item;
 }
 
@@ -223,7 +225,7 @@ export function isGmReactionItem(item) {
 /** Создаёт новый предмет-Реакцию ГМа — мировой Item, помеченный флагом isGmReaction. */
 export async function createGmReactionItem(name = "Новая реакция ГМа") {
   const [item] = await Item.createDocuments([
-    { name, type: MODIFIER_TYPE, flags: { [MODULE_ID]: { [GM_REACTION_FLAG]: true } } }
+    { name, type: MODIFIER_TYPE, img: ModifierDataModel.DEFAULT_ICON, flags: { [MODULE_ID]: { [GM_REACTION_FLAG]: true } } }
   ]);
   return item;
 }
