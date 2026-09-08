@@ -8,8 +8,6 @@ import { registerGmWatch } from "./gm-watch.js";
 import { registerResourceWidget } from "./resource-widget.js";
 import * as SceneResource from "./scene-resource.js";
 import * as Modifiers from "./modifiers.js";
-import { FreeMagicModifierSheet } from "./modifier-sheet.js";
-
 
 // v0.25.2 — ДИАГНОСТИКА: этот лог выполняется на ВЕРХНЕМ УРОВНЕ модуля, в момент, когда браузер
 // просто ЗАГРУЖАЕТ и парсит файл — без каких-либо хуков Foundry, без проверок роли пользователя,
@@ -22,21 +20,7 @@ console.log("%c[FM DIAGNOSTIC] free-magic.js загружен, версия мо
 
 Hooks.once("init", () => {
   console.log("Free Magic | Инициализация модуля");
-  Object.assign(CONFIG.Item.dataModels, {
-    [Modifiers.MODIFIER_TYPE]: Modifiers.ModifierDataModel
-});
-const DocumentSheetConfig = foundry.applications.apps.DocumentSheetConfig;
 
-DocumentSheetConfig.registerSheet(
-  foundry.documents.Item,
-  MODULE_ID,
-  FreeMagicModifierSheet,
-  {
-    types: [Modifiers.MODIFIER_TYPE],
-    makeDefault: true,
-    label: "Модификатор Свободной Магии"
-  }
-);
   registerSheetPanel();
   registerGmWatch();
   registerResourceWidget(); // v0.16 — Базовое отображение Ресурса Сцены, виден всем клиентам
@@ -80,7 +64,6 @@ DocumentSheetConfig.registerSheet(
     type: Boolean,
     default: false
   });
-  
 });
 
 Hooks.once("ready", () => {

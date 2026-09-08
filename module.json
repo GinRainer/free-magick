@@ -14,7 +14,7 @@
   },
   "documentTypes": {
     "Item": {
-      "free-magic.modifier": {
+      "modifier": {
         "htmlFields": ["description", "tier1.effect", "tier2.effect", "tier3.effect"]
       }
     }
