@@ -111,7 +111,153 @@ export function registerTagCheckbox() {
   }
 }
 
-// --- Боковая панель тэгов при Броске Дуальности ---
+// --- Отдельный контейнер для тэгов на листе персонажа (Sleek UI) ---
+// Sleek UI группирует свойства в category-wrapper с data-category-id="heritage|class|..."
+// Мы добавляем свой контейнер data-category-id="fm-tags" и перемещаем туда карточки тэгов.
+
+function isTagCard(el) {
+  // В Sleek UI карточки предметов несут data-item-uuid; проверяем по нему
+  const uuid = el.getAttribute("data-item-uuid");
+  if (!uuid) return false;
+  const item = fromUuidSync ? fromUuidSync(uuid) : null;
+  if (!item) return false;
+  return item.type === "feature" && isTagItem(item);
+}
+
+function rearrangeTagsOnSheet(app, htmlEl) {
+  const root = app.element ?? (htmlEl?.jquery ? htmlEl[0] : htmlEl);
+  if (!root) return;
+
+  const featuresTab = root.querySelector(".features-tab");
+  if (!featuresTab) return; // не Sleek UI — пропускаем
+
+  // Удаляем старый контейнер, если он уже есть (перерендер)
+  featuresTab.querySelectorAll('.category-wrapper[data-category-id="fm-tags"]').forEach((el) => el.remove());
+
+  // Находим все карточки, которые являются тэгами
+  const allCards = featuresTab.querySelectorAll("[data-item-uuid]");
+  const tagCards = [];
+  for (const card of allCards) {
+    try {
+      if (isTagCard(card)) tagCards.push(card);
+    } catch { /* ignore */ }
+  }
+
+  if (!tagCards.length) return;
+
+  // Создаём новый category-wrapper по образцу Sleek UI
+  const tagWrapper = document.createElement("div");
+  tagWrapper.classList.add("category-wrapper");
+  tagWrapper.setAttribute("data-category-id", "fm-tags");
+  tagWrapper.innerHTML = `
+    <div class="category-header" data-action="toggleCategory">
+      <h2>Тэги</h2>
+      <span class="line"></span>
+      <i class="fa-solid fa-chevron-down"></i>
+    </div>
+    <div class="category-content fm-tags-content"></div>
+  `;
+
+  // Вставляем перед extrafeatures (или в конец, если нет)
+  const extraFeatures = featuresTab.querySelector('.category-wrapper[data-category-id="extrafeatures"]');
+  if (extraFeatures) {
+    extraFeatures.before(tagWrapper);
+  } else {
+    featuresTab.appendChild(tagWrapper);
+  }
+
+  // Перемещаем карточки тэгов в новый контейнер
+  const content = tagWrapper.querySelector(".fm-tags-content");
+  for (const card of tagCards) {
+    // Клонируем, чтобы не сломать внутреннюю логику Sleek UI, потом удаляем оригинал
+    content.appendChild(card);
+  }
+}
+
+export function registerTagsOnSheet() {
+  for (const hookName of ["renderActorSheet", "renderActorSheetV2", "renderApplicationV2", "renderApplication"]) {
+    Hooks.on(hookName, (app, htmlEl) => {
+      try {
+        rearrangeTagsOnSheet(app, htmlEl);
+      } catch (err) {
+        console.error(`Free Magic | Ошибка перемещения тэгов на листе (хук "${hookName}")`, err);
+      }
+    });
+  }
+}
+
+// --- Боковая панель тэгов в окне Броска Дуальности ---
+// D20RollDialog — это ApplicationV2 с классами ["daggerheart","dialog","dh-style","views","roll-selection"].
+// Хукаем renderApplicationV2, проверяем классы, и вставляем панель тэгов внутрь диалога.
+
+function isDualityRollDialog(app) {
+  const root = app.element;
+  if (!root) return false;
+  if (!root.classList?.contains("roll-selection")) return false;
+  if (!root.classList?.contains("daggerheart")) return false;
+  return true;
+}
+
+function getActorFromDialog(app) {
+  // D20RollDialog хранит config.data.parent — это актор
+  return (
+    app.config?.data?.parent ??
+    app.actor ??
+    app.document ??
+    null
+  );
+}
+
+function buildDialogTagsHtml(tags) {
+  if (!tags.length) return "";
+  const items = tags
+    .map((t) => {
+      const tooltip = stripHtml(t.description).substring(0, 300);
+      const iconHtml = renderIconHtml(t.icon, { className: "fm-dialog-tag-icon" });
+      return `<div class="fm-dialog-tag-item" title="${tooltip.replace(/"/g, "&quot;")}">
+        ${iconHtml}
+        <span class="fm-dialog-tag-name">${t.label}</span>
+      </div>`;
+    })
+    .join("");
+  return `
+    <div class="fm-dialog-tags-sidebar">
+      <div class="fm-dialog-tags-title"><i class="fa-solid fa-tags"></i> Тэги</div>
+      <div class="fm-dialog-tags-list">${items}</div>
+    </div>
+  `;
+}
+
+function injectDialogTags(app, htmlEl) {
+  if (!isDualityRollDialog(app)) return;
+  const actor = getActorFromDialog(app);
+  if (!actor) return;
+  const tags = getTagSummaries(actor);
+  if (!tags.length) return;
+
+  const root = app.element;
+
+  // Удаляем старую панель (перерендер)
+  root.querySelectorAll(".fm-dialog-tags-sidebar").forEach((s) => s.remove());
+
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = buildDialogTagsHtml(tags);
+  root.appendChild(wrapper.firstElementChild);
+}
+
+export function registerDialogTags() {
+  for (const hookName of ["renderApplicationV2", "renderApplication"]) {
+    Hooks.on(hookName, (app, htmlEl) => {
+      try {
+        injectDialogTags(app, htmlEl);
+      } catch (err) {
+        console.error(`Free Magic | Ошибка инъекции тэгов в диалог броска (хук "${hookName}")`, err);
+      }
+    });
+  }
+}
+
+// --- Боковая панель тэгов в сообщении чата при Броске Дуальности ---
 
 function isDualityRollMessage(message, htmlEl) {
   const el = htmlEl?.jquery ? htmlEl[0] : htmlEl;
@@ -137,27 +283,27 @@ function getActorFromMessage(message) {
   );
 }
 
-function buildDualityTagsHtml(tags) {
+function buildChatTagsHtml(tags) {
   if (!tags.length) return "";
   const items = tags
     .map((t) => {
       const tooltip = stripHtml(t.description).substring(0, 300);
-      const iconHtml = renderIconHtml(t.icon, { className: "fm-duality-tag-icon" });
-      return `<div class="fm-duality-tag-item" title="${tooltip.replace(/"/g, "&quot;")}">
+      const iconHtml = renderIconHtml(t.icon, { className: "fm-chat-tag-icon" });
+      return `<div class="fm-chat-tag-item" title="${tooltip.replace(/"/g, "&quot;")}">
         ${iconHtml}
-        <span class="fm-duality-tag-name">${t.label}</span>
+        <span class="fm-chat-tag-name">${t.label}</span>
       </div>`;
     })
     .join("");
   return `
-    <div class="fm-duality-tags-sidebar">
-      <div class="fm-duality-tags-title"><i class="fa-solid fa-tags"></i> Тэги</div>
-      <div class="fm-duality-tags-list">${items}</div>
+    <div class="fm-chat-tags-sidebar">
+      <div class="fm-chat-tags-title"><i class="fa-solid fa-tags"></i> Тэги</div>
+      <div class="fm-chat-tags-list">${items}</div>
     </div>
   `;
 }
 
-function injectDualityTags(message, htmlEl) {
+function injectChatTags(message, htmlEl) {
   if (!isDualityRollMessage(message, htmlEl)) return;
   const actor = getActorFromMessage(message);
   if (!actor) return;
@@ -167,21 +313,21 @@ function injectDualityTags(message, htmlEl) {
   const el = htmlEl?.jquery ? htmlEl[0] : htmlEl;
   if (!el) return;
 
-  el.querySelectorAll(".fm-duality-tags-sidebar").forEach((s) => s.remove());
+  el.querySelectorAll(".fm-chat-tags-sidebar").forEach((s) => s.remove());
 
   const wrapper = document.createElement("div");
-  wrapper.innerHTML = buildDualityTagsHtml(tags);
+  wrapper.innerHTML = buildChatTagsHtml(tags);
   el.appendChild(wrapper.firstElementChild);
 }
 
-export function registerDualityTagSidebar() {
+export function registerChatTags() {
   const hooks = ["renderChatMessage", "renderChatMessageHTML"];
   for (const hookName of hooks) {
     Hooks.on(hookName, (message, htmlEl) => {
       try {
-        injectDualityTags(message, htmlEl);
+        injectChatTags(message, htmlEl);
       } catch (err) {
-        console.error(`Free Magic | Ошибка инъекции тэгов в бросок (хук "${hookName}")`, err);
+        console.error(`Free Magic | Ошибка инъекции тэгов в сообщение чата (хук "${hookName}")`, err);
       }
     });
   }

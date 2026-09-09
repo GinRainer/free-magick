@@ -1128,6 +1128,101 @@
 .fm-duality-tag-icon { width: 15px; height: 15px; object-fit: contain; flex: 0 0 auto; }
 .fm-duality-tag-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* --- Sleek UI: контейнер тэгов на листе персонажа --- */
+.features-tab .category-wrapper[data-category-id="fm-tags"] .category-header h2 {
+  color: var(--fm-accent, #9166ea);
+}
+.features-tab .category-wrapper[data-category-id="fm-tags"] .fm-tags-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* --- Боковая панель тэгов в окне Броска Дуальности (D20RollDialog) --- */
+.roll-selection .fm-dialog-tags-sidebar {
+  position: absolute;
+  top: 0;
+  right: -200px;
+  width: 190px;
+  max-height: 100%;
+  overflow-y: auto;
+  background: rgba(34, 31, 46, 0.95);
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--fm-text, #ece7f5);
+  font-size: 12px;
+  z-index: 20;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+.roll-selection .fm-dialog-tags-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fm-text-secondary, #a196b8);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.roll-selection .fm-dialog-tags-title i { color: var(--fm-accent, #9166ea); }
+.roll-selection .fm-dialog-tags-list { display: flex; flex-direction: column; gap: 4px; }
+.roll-selection .fm-dialog-tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 4px;
+  background: var(--fm-panel, #221f2e);
+  color: var(--fm-text, #ece7f5);
+  cursor: help;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.roll-selection .fm-dialog-tag-item:hover { border-color: var(--fm-accent, #9166ea); color: #fff; }
+.roll-selection .fm-dialog-tag-icon { width: 18px; height: 18px; object-fit: contain; flex: 0 0 auto; }
+.roll-selection .fm-dialog-tag-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+
+/* --- Боковая панель тэгов в сообщении чата при Броске Дуальности --- */
+.fm-chat-tags-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(34, 31, 46, 0.92);
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 6px;
+  color: var(--fm-text, #ece7f5);
+}
+.fm-chat-tags-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fm-text-secondary, #a196b8);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fm-chat-tags-title i { color: var(--fm-accent, #9166ea); }
+.fm-chat-tags-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.fm-chat-tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 3px 6px;
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 4px;
+  background: var(--fm-panel, #221f2e);
+  color: var(--fm-text, #ece7f5);
+  cursor: help;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.fm-chat-tag-item:hover { border-color: var(--fm-accent, #9166ea); color: #fff; }
+.fm-chat-tag-icon { width: 15px; height: 15px; object-fit: contain; flex: 0 0 auto; }
+.fm-chat-tag-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* --- Постоянный виджет ГМа со списком открытых сборок заклинаний --- */
 #free-magic-gm-watch {
   position: fixed;

@@ -10,7 +10,7 @@ import * as SceneResource from "./scene-resource.js";
 import { ModifierDataModel, MODIFIER_TYPE } from "./modifiers.js";
 import * as Modifiers from "./modifiers.js";
 import { FreeMagicModifierSheet } from "./modifier-sheet.js";
-import { registerTagCheckbox, registerDualityTagSidebar } from "./tags.js";
+import { registerTagCheckbox, registerTagsOnSheet, registerDialogTags, registerChatTags } from "./tags.js";
 
 // v0.25.2 — ДИАГНОСТИКА: этот лог выполняется на ВЕРХНЕМ УРОВНЕ модуля, в момент, когда браузер
 // просто ЗАГРУЖАЕТ и парсит файл — без каких-либо хуков Foundry, без проверок роли пользователя,
@@ -33,7 +33,9 @@ Hooks.once("init", () => {
 
   registerSheetPanel();
   registerTagCheckbox();
-  registerDualityTagSidebar();
+  registerTagsOnSheet();
+  registerDialogTags();
+  registerChatTags();
   registerGmWatch();
   registerResourceWidget(); // v0.16 — Базовое отображение Ресурса Сцены, виден всем клиентам
   SceneResource.registerSceneResourceSettings(); // v0.14 — модель данных Ресурса Сцены (раздел 11), UI ещё впереди (v0.15+)
