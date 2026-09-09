@@ -57,6 +57,20 @@ function injectTagCheckbox(app, htmlEl) {
 
   const isTag = isTagItem(item);
 
+  // Размещаем чекбокс в шапке окна (window-header), слева от кнопки закрытия —
+  // тот же приём, что уже надёжно работает для кнопок «Свободная Магия» и «Пути Магии»
+  // (см. free-magic.js / sheet-panel.js). Раньше чекбокс вставлялся в начало .window-content,
+  // где его перекрывали собственные элементы шапки листа Daggerheart (свойства, иконка),
+  // и клик по нему не проходил.
+  const header =
+    root.querySelector(":scope > .window-header") ??
+    root.querySelector(":scope > header") ??
+    root.querySelector(".window-header") ??
+    root.querySelector(".sheet-header") ??
+    root.querySelector("header");
+
+  if (!header) return;
+
   const row = document.createElement("div");
   row.classList.add("fm-tag-checkbox-row");
   row.innerHTML = `
@@ -67,28 +81,19 @@ function injectTagCheckbox(app, htmlEl) {
     </label>
   `;
 
-  const header =
-    root.querySelector(":scope > .window-header") ??
-    root.querySelector(":scope > header") ??
-    root.querySelector(".sheet-header") ??
-    root.querySelector(".item-header");
+  const closeBtn =
+    header.querySelector('[data-action="close"]') ??
+    header.querySelector(".header-control.close") ??
+    header.querySelector("a.close, button.close, .close");
 
-  const content =
-    root.querySelector(".window-content") ??
-    root.querySelector(".sheet-body") ??
-    root.querySelector(".item-body");
-
-  if (header && content) {
-    content.prepend(row);
-  } else if (content) {
-    content.prepend(row);
-  } else if (header) {
-    header.after(row);
+  if (closeBtn) {
+    header.insertBefore(row, closeBtn);
   } else {
-    root.prepend(row);
+    header.appendChild(row);
   }
 
   row.querySelector(".fm-tag-checkbox").addEventListener("change", async (ev) => {
+    ev.stopPropagation();
     await setTagItem(item, ev.currentTarget.checked);
   });
 }

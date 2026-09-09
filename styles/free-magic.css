@@ -1039,24 +1039,29 @@
 
 /* --- v0.26: Тэги на листе персонажа и в карточке Броска Дуальности ------------------------ */
 .fm-tag-checkbox-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  padding: 8px 10px;
-  margin: 0 0 10px;
-  background: var(--fm-panel, #221f2e);
+  gap: 4px;
+  padding: 2px 8px;
+  margin: 0 4px;
+  background: rgba(34, 31, 46, 0.9);
   border: 1px solid var(--fm-border, #423c58);
-  border-radius: 6px;
+  border-radius: 4px;
+  z-index: 10;
+  pointer-events: auto;
 }
 .fm-tag-checkbox-label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   color: var(--fm-text, #ece7f5);
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
+  white-space: nowrap;
+  margin: 0;
 }
-.fm-tag-checkbox-label i { color: var(--fm-accent, #9166ea); }
-.fm-tag-checkbox { accent-color: var(--fm-accent, #9166ea); }
+.fm-tag-checkbox-label i { color: var(--fm-accent, #9166ea); font-size: 11px; }
+.fm-tag-checkbox { accent-color: var(--fm-accent, #9166ea); cursor: pointer; width: 13px; height: 13px; }
 
 .fm-sheet-tags-list {
   display: flex;
