@@ -1088,6 +1088,19 @@
 }
 .fm-sheet-tag-icon { width: 20px; height: 20px; object-fit: contain; flex: 0 0 auto; }
 .fm-sheet-tag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-sheet-tag-remove {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--fm-text-secondary, #a196b8);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.fm-sheet-tag-remove:hover { color: var(--fm-danger, #e5536b); background: rgba(229, 83, 107, 0.12); }
 
 .fm-duality-tags-sidebar {
   display: flex;
@@ -1140,20 +1153,15 @@
 
 /* --- Боковая панель тэгов в окне Броска Дуальности (D20RollDialog) --- */
 .roll-selection .fm-dialog-tags-sidebar {
-  position: absolute;
-  top: 0;
-  right: -200px;
-  width: 190px;
-  max-height: 100%;
-  overflow-y: auto;
+  margin: 8px 0 4px;
+  padding: 8px;
   background: rgba(34, 31, 46, 0.95);
   border: 1px solid var(--fm-border, #423c58);
   border-radius: 6px;
-  padding: 8px;
   color: var(--fm-text, #ece7f5);
   font-size: 12px;
-  z-index: 20;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  box-sizing: border-box;
 }
 .roll-selection .fm-dialog-tags-title {
   display: flex;

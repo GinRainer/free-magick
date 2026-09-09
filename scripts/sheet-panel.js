@@ -4,7 +4,7 @@ import { renderIconHtml } from "./icon-utils.js";
 import { getActorElements, findCatalogEntry } from "./scene-resource.js";
 import { getMagicCircle, setMagicCircle, getMagicType, setMagicType, getMagicTypeLabel, MAGIC_TYPES } from "./actor-profile.js";
 import { getAutoSpellcastLimit, getSpellcastLimitOverride, setSpellcastLimitOverride, getSpellcastLimit } from "./spellcast-limit.js";
-import { getTagSummaries } from "./tags.js";
+import { getTagSummaries, getTagItems } from "./tags.js";
 
 // Открытые/закрытые панели и активная вкладка держим в памяти клиента (не персистентно —
 // просто чтобы при каждом перерендере листа персонажа (а Foundry делает это часто, на любое
@@ -510,19 +510,30 @@ function renderModifiersTab(container, actor) {
 
 function renderTagsTab(container, actor) {
   if (!container) return;
-  const tags = getTagSummaries(actor);
+  const tags = getTagItems(actor);
   if (!tags.length) {
     container.innerHTML = `<p class="fm-sheet-hint">Тэгов пока нет — отметьте чекбокс «Является тэгом» на любом свойстве (Feature) персонажа.</p>`;
     return;
   }
   container.innerHTML = tags
     .map((t) => {
-      const iconHtml = renderIconHtml(t.icon, { className: "fm-sheet-tag-icon" });
-      const tooltip = (t.description || "").replace(/<[^>]*>/g, "").replace(/"/g, "&quot;").substring(0, 300);
-      return `<div class="fm-sheet-tag-item" title="${tooltip}">
+      const iconHtml = renderIconHtml(t.img, { className: "fm-sheet-tag-icon" });
+      const rawDesc = t.system?.description?.value ?? t.system?.description ?? t.system?.summary?.value ?? "";
+      const tooltip = (rawDesc || "").replace(/<[^>]*>/g, "").replace(/"/g, "&quot;").substring(0, 300);
+      return `<div class="fm-sheet-tag-item" data-item-id="${t.id}" title="${tooltip}">
         ${iconHtml}
-        <span class="fm-sheet-tag-name">${t.label}</span>
+        <span class="fm-sheet-tag-name">${t.name}</span>
+        <button type="button" class="fm-sheet-tag-remove" data-item-id="${t.id}" title="Удалить тэг (предмет будет удалён)"><i class="fa-solid fa-xmark"></i></button>
       </div>`;
     })
     .join("");
+
+  container.querySelectorAll(".fm-sheet-tag-remove").forEach((btn) => {
+    btn.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const itemId = btn.dataset.itemId;
+      await actor.deleteEmbeddedDocuments("Item", [itemId]);
+      renderTagsTab(container, actor);
+    });
+  });
 }

@@ -193,19 +193,34 @@ export function registerTagsOnSheet() {
 function isDualityRollDialog(app) {
   const root = app.element;
   if (!root) return false;
-  if (!root.classList?.contains("roll-selection")) return false;
-  if (!root.classList?.contains("daggerheart")) return false;
-  return true;
+  // Проверяем по нескольким возможным классам диалога броска
+  const hasRollSelection = root.classList?.contains("roll-selection");
+  const hasDaggerheart = root.classList?.contains("daggerheart");
+  const hasDialog = root.classList?.contains("dialog");
+  return (hasRollSelection && hasDaggerheart) || (hasRollSelection && hasDialog);
 }
 
 function getActorFromDialog(app) {
-  // D20RollDialog хранит config.data.parent — это актор
-  return (
-    app.config?.data?.parent ??
-    app.actor ??
-    app.document ??
-    null
-  );
+  // D20RollDialog может хранить актора в разных местах в зависимости от версии системы.
+  // Пробуем все разумные пути.
+  const candidates = [
+    app.config?.data?.parent,
+    app.config?.data?.actor,
+    app.options?.data?.parent,
+    app.options?.data?.actor,
+    app.actor,
+    app.document,
+    app.options?.actor,
+  ];
+  for (const c of candidates) {
+    if (c && (c.documentName === "Actor" || c instanceof CONFIG.Actor.documentClass)) return c;
+  }
+  // Если актор не найден напрямую, пробуем через speaker/roll data
+  const rollData = app.config?.data ?? app.options?.data ?? {};
+  const speaker = rollData.speaker ?? {};
+  if (speaker.actor) return game.actors?.get(speaker.actor);
+  if (speaker.token && canvas?.tokens?.get(speaker.token)) return canvas.tokens.get(speaker.token).actor;
+  return null;
 }
 
 function buildDialogTagsHtml(tags) {
