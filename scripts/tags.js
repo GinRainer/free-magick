@@ -255,6 +255,11 @@ function injectDialogTags(app, htmlEl) {
   // Удаляем старую панель (перерендер)
   root.querySelectorAll(".fm-dialog-tags-sidebar").forEach((s) => s.remove());
 
+  // Обеспечиваем позиционирование корня как контейнера для absolute-сайдбара
+  if (getComputedStyle(root).position === "static") {
+    root.style.position = "relative";
+  }
+
   const wrapper = document.createElement("div");
   wrapper.innerHTML = buildDialogTagsHtml(tags);
   root.appendChild(wrapper.firstElementChild);

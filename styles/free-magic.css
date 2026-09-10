@@ -1152,16 +1152,24 @@
 }
 
 /* --- Боковая панель тэгов в окне Броска Дуальности (D20RollDialog) --- */
+.roll-selection { overflow: visible !important; }
+.roll-selection .window-content { overflow: visible !important; }
 .roll-selection .fm-dialog-tags-sidebar {
-  margin: 8px 0 4px;
-  padding: 8px;
+  position: absolute;
+  top: 0;
+  right: -210px;
+  width: 200px;
+  max-height: 100%;
+  overflow-y: auto;
   background: rgba(34, 31, 46, 0.95);
   border: 1px solid var(--fm-border, #423c58);
   border-radius: 6px;
+  padding: 8px;
   color: var(--fm-text, #ece7f5);
   font-size: 12px;
-  width: 100%;
   box-sizing: border-box;
+  z-index: 20;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 .roll-selection .fm-dialog-tags-title {
   display: flex;
