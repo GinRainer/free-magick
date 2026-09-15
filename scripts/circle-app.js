@@ -599,6 +599,13 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       .map((t) => `<i class="${t <= mod.currentTier ? "fa-solid" : "fa-regular"} fa-star" data-tier="${t}"></i>`)
       .join("");
 
+    const tr = mod.tokenRequirement;
+    const selectedSourceKey = active && tr && tr.mode !== "any" ? this.modsOn[mod.key] : null;
+    const selectedSource = selectedSourceKey ? ALL_SOURCES.find((s) => s.key === selectedSourceKey) : null;
+    const tokenBadge = selectedSource
+      ? `<span class="fm-mod-card-token-badge" title="Токен: ${selectedSource.label}"><i class="${selectedSource.icon}"></i></span>`
+      : "";
+
     return `
       <div class="fm-mod-card ${active ? "fm-mod-card-active" : ""} ${mod.isTierOverridden ? "fm-mod-card-overridden" : ""}" data-key="${mod.key}">
         <div class="fm-mod-card-stars fm-tier-stars ${mod.isGlobal ? "fm-mod-card-stars-editable" : ""}" data-key="${mod.key}" title="${mod.isGlobal ? "Клик по звезде — свой уровень освоения для этого персонажа" : ""}">
@@ -607,6 +614,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
         <label class="fm-mod-card-icon-wrap">
           <input type="checkbox" data-key="${mod.key}" ${active ? "checked" : ""} hidden />
           <img class="fm-mod-icon" src="${mod.icon}" alt="" />
+          ${tokenBadge}
         </label>
       </div>
     `;
@@ -686,6 +694,92 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this._modTooltipEl) this._modTooltipEl.hidden = true;
   }
 
+  // --- Радиальный селектор токена для модификаторов с tokenRequirement (specific/anyOf) ---
+  // Показывает кольцо кнопок с доступными источниками токенов вокруг карточки. Выбор
+  // активирует модификатор с конкретным источником (сохраняется как ключ источника в modsOn,
+  // а не просто true). Клик вне меню или Esc — закрывает без активации.
+
+  _closeTokenRadial() {
+    if (this._tokenRadialEl) {
+      this._tokenRadialEl.remove();
+      this._tokenRadialEl = null;
+    }
+    document.removeEventListener("click", this._tokenRadialOutsideHandler);
+    document.removeEventListener("keydown", this._tokenRadialEscHandler);
+  }
+
+  _openTokenRadial(cardEl, mod, root) {
+    this._closeTokenRadial();
+    this._hideModTooltip();
+
+    const tr = mod.tokenRequirement;
+    const sources = (tr?.sources ?? [])
+      .map((k) => ALL_SOURCES.find((s) => s.key === k))
+      .filter(Boolean);
+
+    if (sources.length === 0) {
+      this.modsOn[mod.key] = true;
+      this._refreshTokensPanel();
+      this._recalculate(root);
+      this._renderModifiers(root);
+      return;
+    }
+
+    const radial = document.createElement("div");
+    radial.className = "fm-token-radial";
+    radial.innerHTML = `<div class="fm-token-radial-prompt">Выберите токен</div>`;
+
+    const n = sources.length;
+    const radius = 52;
+    sources.forEach((src, i) => {
+      const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "fm-token-radial-btn";
+      btn.style.transform = `translate(${x}px, ${y}px)`;
+      btn.style.borderColor = src.color ?? "";
+      btn.title = src.label;
+      btn.innerHTML = `<i class="${src.icon}"></i>`;
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        this.modsOn[mod.key] = src.key;
+        this._closeTokenRadial();
+        this._refreshTokensPanel();
+        this._recalculate(root);
+        this._renderModifiers(root);
+      });
+      radial.appendChild(btn);
+    });
+
+    const rect = cardEl.getBoundingClientRect();
+    radial.style.left = `${rect.left + rect.width / 2}px`;
+    radial.style.top = `${rect.top + rect.height / 2}px`;
+    document.body.appendChild(radial);
+    this._tokenRadialEl = radial;
+
+    this._tokenRadialOutsideHandler = (ev) => {
+      if (!radial.contains(ev.target)) {
+        this._closeTokenRadial();
+        // Checkbox was checked but no token selected — revert it
+        const cb = cardEl.querySelector("input[type=checkbox]");
+        if (cb && !this.modsOn[mod.key]) cb.checked = false;
+      }
+    };
+    this._tokenRadialEscHandler = (ev) => {
+      if (ev.key === "Escape") {
+        this._closeTokenRadial();
+        const cb = cardEl.querySelector("input[type=checkbox]");
+        if (cb && !this.modsOn[mod.key]) cb.checked = false;
+      }
+    };
+    setTimeout(() => {
+      document.addEventListener("click", this._tokenRadialOutsideHandler);
+      document.addEventListener("keydown", this._tokenRadialEscHandler);
+    }, 0);
+  }
+
   _renderModifiers(root) {
     const tabsEl = root.querySelector(".fm-mods-tabs");
     const listEl = root.querySelector(".fm-mods-list");
@@ -741,10 +835,15 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!mod) return;
 
       card.querySelector("input[type=checkbox]").addEventListener("change", (ev) => {
-        this.modsOn[key] = ev.currentTarget.checked;
-        this._refreshTokensPanel(); // пул Маны мог измениться
-        this._recalculate(root);
-        this._renderModifiers(root); // перерисовать подсветку активной карточки
+        const tr = mod.tokenRequirement;
+        if (ev.currentTarget.checked && tr && tr.mode !== "any" && (tr.sources?.length ?? 0) > 0) {
+          this._openTokenRadial(card, mod, root);
+        } else {
+          this.modsOn[key] = ev.currentTarget.checked;
+          this._refreshTokensPanel();
+          this._recalculate(root);
+          this._renderModifiers(root);
+        }
       });
 
       card.addEventListener("mouseenter", () => this._showModTooltip(card, mod));

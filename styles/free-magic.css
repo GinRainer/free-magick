@@ -480,6 +480,66 @@
 .fm-mod-tooltip-tier-label { font-size: 10px; color: var(--fm-text-secondary, #a196b8); flex: 0 0 auto; white-space: nowrap; }
 .fm-mod-tooltip-tier-effect { font-size: 11px; line-height: 1.3; }
 
+/* --- Радиальный селектор токена (для модификаторов с tokenRequirement specific/anyOf) --- */
+.fm-token-radial {
+  position: fixed;
+  z-index: 30000;
+  transform: translate(-50%, -50%);
+}
+.fm-token-radial-prompt {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--fm-text, #ece7f5);
+  background: var(--fm-panel, #221f2e);
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+.fm-token-radial-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--fm-border, #423c58);
+  background: var(--fm-panel, #221f2e);
+  color: var(--fm-text, #ece7f5);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  margin: -18px 0 0 -18px;
+}
+.fm-token-radial-btn:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+/* --- Настройка требования токена в листе модификатора --- */
+.fm-modsheet-token-req { display: flex; gap: 12px; margin-bottom: 8px; }
+.fm-modsheet-token-mode { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
+.fm-modsheet-token-sources { margin-top: 4px; }
+.fm-modsheet-token-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  margin: 2px;
+  border: 1px solid var(--fm-border, #423c58);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.fm-modsheet-token-source.fm-disabled { opacity: 0.4; cursor: default; }
+.fm-modsheet-token-source i { font-size: 11px; }
+
 .fm-mod-badge {
   font-size: 10px;
   padding: 1px 6px;
