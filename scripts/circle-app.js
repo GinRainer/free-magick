@@ -637,6 +637,20 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       ? `<span class="fm-mod-source fm-mod-source-global">Общий${mod.isTierOverridden ? " · свой уровень" : ""}</span>`
       : `<span class="fm-mod-source fm-mod-source-personal">Личный</span>`;
 
+    const descHtml = (mod.description || "").trim();
+    const tierLabels = ["I уровень", "II уровень", "III уровень"];
+    const tierEffects = [1, 2, 3].map((t) => {
+      const td = mod.item?.system?.[`tier${t}`];
+      if (!td) return "";
+      const effect = (td.effect || "").trim();
+      if (!effect) return "";
+      return `<div class="fm-mod-tooltip-tier ${t === mod.currentTier ? "fm-mod-tooltip-tier-current" : ""}">
+        <span class="fm-mod-tooltip-tier-stars">${[1,2,3].map((s) => `<i class="${s <= t ? "fa-solid" : "fa-regular"} fa-star"></i>`).join("")}</span>
+        <span class="fm-mod-tooltip-tier-label">${tierLabels[t-1]}</span>
+        <span class="fm-mod-tooltip-tier-effect">${effect}</span>
+      </div>`;
+    }).join("");
+
     tooltip.innerHTML = `
       <div class="fm-mod-tooltip-header">
         <img src="${mod.icon}" alt="" />
@@ -651,6 +665,8 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
         <span class="fm-mod-badge fm-mod-badge-category">${mod.category}</span>
         ${sourceTag}
       </div>
+      ${descHtml ? `<div class="fm-mod-tooltip-description">${descHtml}</div>` : ""}
+      ${tierEffects ? `<div class="fm-mod-tooltip-tiers">${tierEffects}</div>` : ""}
       ${mod.requirement ? `<p class="fm-mod-tooltip-requirement"><i class="fa-solid fa-lock"></i> ${mod.requirement}</p>` : ""}
       ${mod.isGlobal ? `<p class="fm-mod-tooltip-hint">Клик по звезде — свой уровень освоения для этого персонажа</p>` : ""}
     `;

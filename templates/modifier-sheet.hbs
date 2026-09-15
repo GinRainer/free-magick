@@ -41,6 +41,39 @@
   </section>
   {{/if}}
 
+  <section class="fm-modsheet-section">
+    <h3>Требуемый Токен</h3>
+    <p class="fm-modsheet-hint">Какой токен нужен для активации этого модификатора.</p>
+    <div class="fm-modsheet-token-req">
+      <label class="fm-modsheet-token-mode">
+        <input type="radio" name="system.tokenRequirement.mode" value="any" {{#if (eq tokenRequirement.mode "any")}}checked{{/if}} />
+        <span>Любой токен</span>
+      </label>
+      <label class="fm-modsheet-token-mode">
+        <input type="radio" name="system.tokenRequirement.mode" value="anyOf" {{#if (eq tokenRequirement.mode "anyOf")}}checked{{/if}} />
+        <span>Любой из заданных</span>
+      </label>
+      <label class="fm-modsheet-token-mode">
+        <input type="radio" name="system.tokenRequirement.mode" value="specific" {{#if (eq tokenRequirement.mode "specific")}}checked{{/if}} />
+        <span>Только конкретный тип</span>
+      </label>
+    </div>
+    <div class="fm-modsheet-token-sources" data-mode="{{tokenRequirement.mode}}">
+      <p class="fm-modsheet-hint">{{#if (eq tokenRequirement.mode "any")}}Не требуется — подойдёт любой токен.{{else}}{{#if (eq tokenRequirement.mode "specific")}}Выберите один тип токена:{{else}}Выберите допустимые типы токенов:{{/if}}{{/if}}</p>
+      {{#each tokenSources}}
+      <label class="fm-modsheet-token-source {{#if (eq ../tokenRequirement.mode "any")}}fm-disabled{{/if}}">
+        <input type="{{#if (eq ../tokenRequirement.mode "specific")}}radio{{else}}checkbox{{/if}}"
+               name="system.tokenRequirement.sources"
+               value="{{this.key}}"
+               {{#if this.checked}}checked{{/if}}
+               {{#if (eq ../tokenRequirement.mode "any")}}disabled{{/if}} />
+        <i class="{{this.icon}}"></i>
+        <span>{{this.label}}</span>
+      </label>
+      {{/each}}
+    </div>
+  </section>
+
   <section class="fm-modsheet-section fm-modsheet-tiers">
     <h3>Уровни освоения</h3>
     {{#each tiers}}

@@ -72,6 +72,10 @@ export class ModifierDataModel extends foundry.abstract.TypeDataModel {
       hideLockedTiers: new fields.BooleanField({ required: true, initial: false }),
       category: new fields.StringField({ required: false, blank: true, initial: DEFAULT_MODIFIER_CATEGORY }),
       requirement: new fields.StringField({ required: false, blank: true, initial: "" }),
+      tokenRequirement: new fields.SchemaField({
+        mode: new fields.StringField({ required: true, initial: "any", choices: ["any", "anyOf", "specific"] }),
+        sources: new fields.ArrayField(new fields.StringField(), { required: false, initial: [] })
+      }),
       tier1: tierSchema(),
       tier2: tierSchema(),
       tier3: tierSchema()
@@ -133,6 +137,8 @@ function toSummary(item, extra = {}, tierOverride = null) {
     category: (item.system?.category || "").trim() || DEFAULT_MODIFIER_CATEGORY,
     requirement: (item.system?.requirement || "").trim(),
     description: item.system?.description ?? "",
+    tokenRequirement: item.system?.tokenRequirement ?? { mode: "any", sources: [] },
+    item,
     ...extra
   };
 }
