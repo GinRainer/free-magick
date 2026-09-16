@@ -32,8 +32,24 @@ function defaultCatalog() {
     ["cosmos", "Космос", "fa-solid fa-star"]
   ];
   return Object.fromEntries(
-    base.map(([id, label, icon]) => [id, { id, label, icon, tooltip: "", aspects: {} }])
+    base.map(([id, label, icon]) => ({
+      id,
+      label,
+      icon,
+      tooltip: "",
+      aspects: {},
+      customProperties: defaultCustomProperties(),
+      hideCustomProperties: false
+    }))
   );
+}
+
+function defaultCustomProperties() {
+  return [
+    { label: "Свойство 1", value: "" },
+    { label: "Свойство 2", value: "" },
+    { label: "Свойство 3", value: "" }
+  ];
 }
 
 export function registerSceneResourceSettings() {
@@ -294,9 +310,19 @@ export async function setResourceMax(key, newMax, sceneId = null) {
 
   const max = Math.max(1, Math.floor(Number(newMax)) || 1);
   const value = Math.min(entry.value, max);
-  const active = { ...current.active, [key]: { value, max } };
+  const active = { ...current.active, [key]: { ...entry, value, max } };
   await setSceneResourceData(sceneId, { ...current, active });
   return { value, max };
+}
+
+export async function setResourceOccupied(key, occupiedBy, sceneId = null) {
+  const current = getSceneResourceData(sceneId);
+  const entry = current.active[key];
+  if (!entry) return null;
+
+  const active = { ...current.active, [key]: { ...entry, occupiedBy: occupiedBy || null } };
+  await setSceneResourceData(sceneId, { ...current, active });
+  return occupiedBy || null;
 }
 
 // --- Привязка Элемента/Аспекта к персонажу (флаги актора, раздел 11.4 / 13) -----------------

@@ -333,6 +333,7 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this._updateActorHookId) Hooks.off("updateActor", this._updateActorHookId);
     this._itemHooks?.forEach(({ name, id }) => Hooks.off(name, id));
     this._modTooltipEl?.remove(); // всплывающий предпросмотр Модификатора (v0.24) — не оставляем висеть в DOM
+    this._closeTokenRadial?.(); // радиальный селектор токена — тоже
     this.tokensPanel?.close(); // боковое окно «Мои Токены Маны» (v0.25) закрывается вместе с Кругом
     if (this.actor) {
       liveInstances.delete(this.actor.id);
@@ -676,6 +677,12 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
       ${descHtml ? `<div class="fm-mod-tooltip-description">${descHtml}</div>` : ""}
       ${tierEffects ? `<div class="fm-mod-tooltip-tiers">${tierEffects}</div>` : ""}
       ${mod.requirement ? `<p class="fm-mod-tooltip-requirement"><i class="fa-solid fa-lock"></i> ${mod.requirement}</p>` : ""}
+      ${(() => {
+        const tr = mod.tokenRequirement;
+        if (!tr || tr.mode === "any") return "";
+        const srcs = (tr.sources ?? []).map((k) => ALL_SOURCES.find((s) => s.key === k)?.label ?? k).join(", ");
+        return `<p class="fm-mod-tooltip-requirement"><i class="fa-solid fa-droplet"></i> Требует токен: ${srcs}</p>`;
+      })()}
       ${mod.isGlobal ? `<p class="fm-mod-tooltip-hint">Клик по звезде — свой уровень освоения для этого персонажа</p>` : ""}
     `;
     tooltip.hidden = false;
@@ -1526,6 +1533,11 @@ export class FreeMagicCircle extends HandlebarsApplicationMixin(ApplicationV2) {
         if (m.tokenCost < 0) parts.push(`даёт +${Math.abs(m.tokenCost)} в Токены Маны`);
         else if (m.tokenCost > 0) parts.push(`доп. стоимость ${m.tokenCost}`);
         if (m.difficultyDelta !== 0) parts.push(`${m.difficultyDelta > 0 ? "+" : ""}${m.difficultyDelta} к Сложности`);
+        const tr = m.tokenRequirement;
+        if (tr && tr.mode !== "any" && typeof this.modsOn[m.key] === "string") {
+          const src = ALL_SOURCES.find((s) => s.key === this.modsOn[m.key]);
+          if (src) parts.push(`токен: ${src.label}`);
+        }
         const desc = parts.length ? parts.join("; ") : "без влияния на стоимость/сложность";
         return `<li>${m.label} (${desc})</li>`;
       })

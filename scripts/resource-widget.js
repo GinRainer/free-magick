@@ -12,6 +12,7 @@ import {
   getBackgroundStatus,
   getBackgroundIcon,
   setResourceValue,
+  setResourceOccupied,
   getActorElements,
   getActorAspect,
   getActorRevealsBackground
@@ -219,19 +220,29 @@ function renderElementBlock(element, viewerKeys, isGM) {
 }
 
 function renderRow(entry, viewerKeys, isGM, cssClass) {
-  const editable = canTouch(entry.id, viewerKeys, isGM);
+  const editable = canTouch(entry.id, viewerKeys, isGM) && !entry.occupiedBy;
   const iconHtml = renderIconHtml(entry.icon, { title: entry.tooltip ?? "" });
+  const occupiedBadge = entry.occupiedBy
+    ? `<span class="fmrw-occupied-badge" title="Занято: ${entry.occupiedBy}"><i class="fa-solid fa-lock"></i></span>`
+    : "";
+  const occupyBtn = isGM
+    ? `<button type="button" class="fmrw-btn fmrw-occupy" data-key="${entry.id}" title="${entry.occupiedBy ? "Освободить" : "Занять"}">${entry.occupiedBy ? '<i class="fa-solid fa-lock-open"></i>' : '<i class="fa-solid fa-hand-fist"></i>'}</button>`
+    : "";
   return `
-    <div class="fmrw-row ${cssClass}" data-key="${entry.id}">
+    <div class="fmrw-row ${cssClass} ${entry.occupiedBy ? "fmrw-row-occupied" : ""}" data-key="${entry.id}">
       ${iconHtml}
       <span class="fmrw-label">${entry.label}</span>
+      ${occupiedBadge}
       ${
         editable
           ? `<button type="button" class="fmrw-btn fmrw-minus" data-key="${entry.id}">−</button>
              <span class="fmrw-value">${entry.value}/${entry.max}</span>
              <button type="button" class="fmrw-btn fmrw-plus" data-key="${entry.id}">+</button>`
-          : ""
+          : entry.occupiedBy
+            ? `<span class="fmrw-value">${entry.value}/${entry.max}</span>`
+            : ""
       }
+      ${occupyBtn}
     </div>
   `;
 }
@@ -240,15 +251,25 @@ function wireRows(sceneId, viewerKeys, isGM) {
   widgetEl.querySelectorAll(".fmrw-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const key = btn.dataset.key;
-      if (!canTouch(key, viewerKeys, isGM)) return; // страховка — кнопки и так не рендерятся без прав
+      if (btn.classList.contains("fmrw-occupy")) {
+        if (!isGM) return;
+        const current = findEntryByKey(getActiveResourceList(sceneId), key);
+        if (!current) return;
+        if (current.occupiedBy) {
+          await setResourceOccupied(key, null, sceneId);
+        } else {
+          const name = game.user.name;
+          await setResourceOccupied(key, name, sceneId);
+        }
+        return;
+      }
 
+      if (!canTouch(key, viewerKeys, isGM)) return;
       const current = findEntryByKey(getActiveResourceList(sceneId), key);
       if (!current) return;
 
       const delta = btn.classList.contains("fmrw-plus") ? 1 : -1;
       await setResourceValue(key, current.value + delta, sceneId);
-      // renderWidget() вызовется сам через хук updateScene у ВСЕХ клиентов, включая этого —
-      // повторный локальный вызов здесь не нужен и был бы просто безвредным дублем.
     });
   });
 }

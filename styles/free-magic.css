@@ -423,6 +423,23 @@
   object-fit: cover;
   background: var(--fm-panel);
 }
+.fm-mod-card-token-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--fm-panel, #221f2e);
+  border: 1px solid var(--fm-border, #423c58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: var(--fm-text, #ece7f5);
+  pointer-events: none;
+}
+.fm-mod-card-icon-wrap { position: relative; }
 
 /* --- Всплывающий предпросмотр карточки Модификатора (v0.24) — один переиспользуемый элемент,
    позиционируется JS-ом (position: fixed) прямо над/под наведённой карточкой. --- */
@@ -1725,6 +1742,21 @@
   padding: 0;
 }
 .fmrw-btn:hover { background: var(--fm-accent); color: var(--fm-bg); }
+.fmrw-occupied-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  color: var(--fm-gold, #cda85f);
+  margin-left: 2px;
+}
+.fmrw-row-occupied { opacity: 0.75; }
+.fmrw-row-occupied .fmrw-label { color: var(--fm-text-secondary, #a196b8); }
+.fmrw-occupy {
+  background: rgba(var(--fm-gold-rgb, 205, 168, 95), 0.15);
+  border-color: var(--fm-gold, #cda85f);
+  color: var(--fm-gold, #cda85f);
+}
+.fmrw-occupy:hover { background: var(--fm-gold, #cda85f); color: var(--fm-bg, #17141f); }
 .fmrw-empty-hint { color: var(--fm-text-secondary); font-size: 11px; margin: 4px 0 0; }
 
 /* --- v0.18: Иконки-файлы из мира Foundry (наравне с классами FontAwesome) --- */
